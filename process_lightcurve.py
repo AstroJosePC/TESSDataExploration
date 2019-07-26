@@ -8,38 +8,41 @@ from glob import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from random import randint
-from os import isfile
+from os.path import isfile
 
 # Some constants
 sector = 8
 cutoutsize = 8
-lc_filename = '../LightCurves/TESS_LC_{0}_SEC{1}.fits'
+lc_filename = 'DataOutput/LightCurves/TESS_LC_{0}_SEC{1}.fits'
 
 # List of SampleTPF files that have the aperture masks
-sample_tpfs = glob('./SampleTPFs/*.fits')
+sample_tpfs = glob('DataOutput/SampleTPFs/*.fits')
 
 # Make parallel list of target names; convert ID's into integers
-sample_targets = [int(filename.split('_')[1]) for filename in sample_tpfs]
+sample_targets = [filename.split('_')[1] for filename in sample_tpfs]
 
 # Import target list
-targets = ascii.read("../Tables/cluster_targets_tic.csv")
+targets = ascii.read('DataInput/cluster_targets_tic.ecsv')
 
 # This is the mags we loop over
-mags = np.arange(10, 20)
+mags = np.unique(targets['G Group'])
 
 # Loop over magnitude groups; e.g. 10 mag, 12 mag, 13 mag, etc.
 for mag in mags:
-    print('Currently producing light curves for mag=', mag)
+    print('Currently producing light curves for group of mag=', mag)
     # All targets of current mag
-    idx = (mag <= targets['G']) & (targets['G'] < mag+1)
+    idx = targets['G Group'] == mag
     group_targets = targets[idx]['TIC ID']
     
     # Get sample tpfs for current group of targets
     # group_samples = [target for target in sample_targets if target in group_targets]
     group_samples = [sample_tpfs[i] for i in range(len(sample_targets)) if sample_targets[i] in group_targets]
     
+    # number of samples
+    n_samples = len(group_samples)
+    
     # If there are no group samples, continue with the next one
-    if len(group_samples) == 0:
+    if n_samples == 0:
         print('No sample tpfs found for current group')
         continue
     
@@ -54,7 +57,7 @@ for mag in mags:
     # Generate boolean master aperture mask 
     # I want to keep the mask pixels that are shared between at least two images. 
     # That means that if I sum the aperture masks, I will keep the mask pixels that are above 6.
-    boolean_apt = np.sum(apertures, axis=0) > 6.
+    boolean_apt = np.sum(apertures, axis=0) > max(6, 3 * n_samples//3)
     
     # Now use the boolean aperture mask to export light curves of current group
     for target in group_targets:
