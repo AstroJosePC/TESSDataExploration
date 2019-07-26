@@ -8,6 +8,7 @@ from glob import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from random import randint
+from os import isfile
 
 # Some constants
 sector = 8
@@ -57,6 +58,9 @@ for mag in mags:
     
     # Now use the boolean aperture mask to export light curves of current group
     for target in group_targets:
+        # Skip lightcurves files that already exist
+        if isfile(lc_filename.format(target, sector)):
+            continue
         print('Exporting light curve file for TIC =', target)
         # Download cutouts to create light curve
         tpf = search_tesscut(target, sector=sector).download(cutout_size=cutoutsize)
