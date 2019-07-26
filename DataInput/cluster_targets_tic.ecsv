@@ -1,7 +1,58 @@
-# The following lines beginning with # are comments. Readable columns names and datatypes are provided as informational comment lines in addition to the database column names.
-# If you want to re-upload this table import it as a Generic Table with these header lines unmodified.
-# RAJ2000, DecJ2000, pmRA, pmDec, R, G, J, H, K, MatchID, TESS Mag., dstArcSec, 2MASS ID, GAIA ID, Source of Position, T_eff, T_eff Err., log(g), log(g) Err., Stellar Radius, Stellar Radius Err., Stellar Mass, Stellar Mass Err., Stellar Density, Stellar Density Err., Luminosity Class from RPM, Stellar Luminosity, Stellar Luminosity Err., Distance, Distance Err., E(B-V), E(B-V) Err.
-# float, float, float, float, float, float, float, float, float, string, float, float, string, string, string, float, float, float, float, float, float, float, float, float, float, string, float, float, float, float, float, float
+# %ECSV 0.9
+# ---
+# datatype:
+# - {name: RAJ2000, unit: deg, datatype: float64}
+# - {name: DecJ2000, unit: deg, datatype: float64}
+# - {name: pmRA, datatype: float64}
+# - {name: pmDec, datatype: float64}
+# - {name: R, datatype: float64}
+# - {name: G, datatype: float64}
+# - {name: J, datatype: float64}
+# - {name: H, datatype: float64}
+# - {name: K, datatype: float64}
+# - {name: TIC ID, datatype: string}
+# - {name: G Group, datatype: int64}
+# - {name: Tmag, datatype: float64}
+# - {name: dstArcSec, datatype: float64}
+# - {name: TWOMASS, datatype: string}
+# - {name: GAIA, datatype: string}
+# - {name: POSflag, datatype: string}
+# - {name: Teff, datatype: float64}
+# - {name: e_Teff, datatype: float64}
+# - {name: logg, datatype: float64}
+# - {name: e_logg, datatype: float64}
+# - {name: rad, datatype: float64}
+# - {name: e_rad, datatype: float64}
+# - {name: mass, datatype: float64}
+# - {name: e_mass, datatype: float64}
+# - {name: rho, datatype: float64}
+# - {name: e_rho, datatype: float64}
+# - {name: lumclass, datatype: string}
+# - {name: lum, datatype: float64}
+# - {name: e_lum, datatype: float64}
+# - {name: d, datatype: float64}
+# - {name: e_d, datatype: float64}
+# - {name: ebv, datatype: float64}
+# - {name: e_ebv, datatype: float64}
+# meta: !!omap
+# - comments: ['The following lines beginning with # are comments. Readable columns names and datatypes are provided as informational
+#       comment lines in addition to the database column names.', If you want to re-upload this table import it as a Generic Table with
+#       these header lines unmodified., 'RAJ2000, DecJ2000, pmRA, pmDec, R, G, J, H, K, MatchID, TESS Mag., dstArcSec, 2MASS ID, GAIA
+#       ID, Source of Position, T_eff, T_eff Err., log(g), log(g) Err., Stellar Radius, Stellar Radius Err., Stellar Mass, Stellar Mass
+#       Err., Stellar Density, Stellar Density Err., Luminosity Class from RPM, Stellar Luminosity, Stellar Luminosity Err., Distance,
+#       Distance Err., E(B-V), E(B-V) Err.', '@ra, dec, float, float, float, float, float, float, float, string, float, float, string,
+#       string, string, float, float, float, float, float, float, float, float, float, float, string, float, float, float, float, float,
+#       float']
+# - __serialized_columns__:
+#     DecJ2000:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: &id001 !astropy.units.Unit {unit: deg}
+#       value: !astropy.table.SerializedColumn {name: DecJ2000}
+#     RAJ2000:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: *id001
+#       value: !astropy.table.SerializedColumn {name: RAJ2000}
+# schema: astropy-2.0
 RAJ2000 DecJ2000 pmRA pmDec R G J H K "TIC ID" "G Group" Tmag dstArcSec TWOMASS GAIA POSflag Teff e_Teff logg e_logg rad e_rad mass e_mass rho e_rho lumclass lum e_lum d e_d ebv e_ebv
 130.913960833333 -53.13212175 -24.171 23.908 16.413 16.318 13.144 12.545 12.281 94184079 16 14.9214 1.21818822951231e-05 08433935-5307556 5318505285944674432 tmgaia2 3152.0 157.0 4.82445 0.00422185 0.402408 0.0125077 0.394196 0.0206618 6.0494 0.246983 DWARF 0.01440034 0.003787518 157.995 1.535 0.0714889 0.000645741
 131.257953333333 -53.5578578333333 -24.801 22.382 17.907 17.762 14.401 13.828 13.498 144757228 17 16.2957 2.68583369197422e-05 08450191-5333282 5318270604630115840 tmgaia2 3057.0 158.0 4.99674 0.0111068 0.242394 0.0087802 0.212674 0.0207865 14.9331 0.158803 DWARF 0.00462296 0.001299839 148.144 2.566 0.0509227 0.000822934
