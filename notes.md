@@ -24,6 +24,8 @@ I noticed that about 1/3 of the stars are of 16-mag. It's probably not fair to p
 So I'm wondering if it's worth separating them according to other factors like standard deviation, diff b/t highest value to background, etc.
 I found 1/5 are in 17-mag group.
 
+7/27
+
 I made a slight modification to how I choose which pixels to keep in the master aperture masks. 
 If I restart a notebook and run it again, different random files will be selected unless I seed the random generator.
 Which means I accumulate more sample TPFs for the aperture mask generation. 
@@ -32,20 +34,25 @@ However, as a temporary fix I opted on simply changed the way the pixels are kep
 Before, I'd keep pixels if at least two aperture masks overlaped. However, now I want to keep aperture masks if two OR 1/3 of the 
 aperture masks overlap.
 
-- 10 mag group notes
-    - I re
+7/28
 
-- 11 mag group notes
+I started doing the Periodogram analysis. To setup a workflow I first need to be able to combine the quality flags with the
+processed light curves. My first attempt went like this:
+```python
+# Open Chelsea's sample light curve, there are 5 cadences missing in downloaded raw data
+quality_sample = fits.open('DataInput/ClusterQuality/Sector8_Sample.fits.gz')
+# So I got to use a shorter quality mask
+quality_mask = quality_sample[1].data['QUALITY'][5:]
+# I replace all of the 1s with 128s, matching the quality flags: 128 = Manual Exclude
+quality_mask[quality_mask == 1] = 128
 
+# Generate TessLightCurveFile object using the saved lightcurve (FITS), and Chelsea's quality mask
+# The get_lightcurve() method will output a TessLightCurve object
+lc = TessLightCurveFile('DataOutput/LightCurves/TESS_LC_144752281_SEC8.fits',
+                        quality_bitmask=quality_mask).get_lightcurve('FLUX')
 
-- 12 mag group notes
+```
 
-
-- 13 mag group notes
-
-
-- 14 mag group notes
-
-
-- 15 mag group notes
-    - 
+However, this didn't work. The light curves that my code has generated have no quality mask. For some reason, If I try doing the above
+method, the TessLightCurveFile generation will not combine my light curve's quality flags and Chelsea's `quality_mask`. Instead, I 
+thought it might be a better idea to 
