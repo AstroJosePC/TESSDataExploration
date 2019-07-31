@@ -94,4 +94,32 @@ After exploring the TessLightCurve & LombScarglePeriodogram I found some useful 
         - min_period = 4 : Minimum detectable period
         - max_period = 20 : Maximum detectable period
         - ov_sampling = 8
-- TessLightCurve.fold : ??? Not sure how to describe it...
+- TessLightCurve.fold : given the light curve's period, plot each period on top of each of other
+
+## Notes on 7/29
+
+At this point, I went proceeded to use TessLightCurve's methods to produce a clean periodogram, and plot it using TIC 144752281 as an example. 
+I added vertical lines to the periodogram plot to show the detected periods. I found that **the most credible period was ~6.10 days**. *This turned out to be wrong*.
+I folded the top 5 detected periodic signals to confirm that the period of 6.10 was the best. However, I later discovered that the folded light curve with the period of
+6 days actually was showing 2 periods.
+
+
+## Notes on 7/30
+
+Following Stephanie's advise I plotted the top 5 credible periods for the star that I started working with (TIC: 144752281).
+Then I changed the min/max period to what Stephanie suggested (0.1/28 days). Since it was pretty simple to find the peaks in the small
+samples I had, increasing the sampling will need some other methodology. After some googling I found a simple function to find local maxima in signals:
+
+```python
+maxima = scipy.signal.argrelmax(mysignal)
+```
+
+Once I was able to access the maxima of the new periodogram, I plotted it, and drew red dashed vertical lines showing where the maxima values are. This is when I realized that
+there were a lot of periodic signals detected of short periods < 3 days, which I think is simply noise. In order to filter those out, I decided to cut off all periods whose 
+power was lower than 95% percentile. There is a total of ~15 periods after filtering. Now that the period search range is larger, I was able to see the largest signal 
+was a periodic behavior of ~3 days. Once I folded the light curve using this period I noticed it looks great.
+
+
+## Notes on 7/31
+
+
