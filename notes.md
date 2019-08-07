@@ -123,3 +123,10 @@ was a periodic behavior of ~3 days. Once I folded the light curve using this per
 ## Notes on 7/31
 
 
+
+
+How I processed the light curves using `lightkurve`. 
+Processing the light curves into periodograms
+When showing plots, explain axes; 
+Learn Lomb Scargle periodogram; a way of estimating the fourier transform for unevenly sampled data. Prob that signal is periodic. 
+
