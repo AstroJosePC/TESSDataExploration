@@ -123,10 +123,16 @@ was a periodic behavior of ~3 days. Once I folded the light curve using this per
 ## Notes on 7/31
 
 
-
-
 How I processed the light curves using `lightkurve`. 
 Processing the light curves into periodograms
 When showing plots, explain axes; 
 Learn Lomb Scargle periodogram; a way of estimating the fourier transform for unevenly sampled data. Prob that signal is periodic. 
+
+
+## Notes on 10/17
+
+Added the file I've been working on for a while. I'm trying to explore the proper ways of creating the lightcurves. More specifically, aperture selection, and background estimation. Furthermore, the techniques I have / will be implementing are those that can be automated. Very important! 
+
+For details, see the RemakingGetLC notebook.
+
 
