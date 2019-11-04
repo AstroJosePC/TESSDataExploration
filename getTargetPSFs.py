@@ -1,14 +1,10 @@
-from astropy.coordinates import SkyCoord
 from astropy.io import ascii
-from astropy.io import fits
-from astropy.table import Column
-from astropy.stats import sigma_clip
-from astroquery.mast import Tesscut
-from lightkurve import TessTargetPixelFile, search_targetpixelfile, search_tesscut, TessLightCurve, TessLightCurveFile, MPLSTYLE
+from lightkurve import TessTargetPixelFile, search_targetpixelfile, search_tesscut, TessLightCurveFile, MPLSTYLE
 from glob import glob
+from os import mkdir
+from os.path import isdir
 import numpy as np
 import matplotlib.pyplot as plt
-from random import randint, sample
 import warnings
 
 percentile=80
@@ -65,7 +61,10 @@ if __name__ == '__main__':
 
         group_apts[i] = np.sum(apertures, axis=0) > max(6, len(apertures))
 
-
+    # Create folder to save FFI 
+    if not isdir('TargetFFI'):
+        mkdir('TargetFFI')
+    
     # Loop over targets to plot and save them
     for target in targets:
         ticid = target['TIC ID']
@@ -129,7 +128,7 @@ if __name__ == '__main__':
 
         plt.tight_layout()
         plt.subplots_adjust(top=0.85, left=0.132, bottom=0.1),# wspace=0., hspace=0.2)
-        fig.savefig(f"./giantplot/{ticid}_M{target['G Group']}_FFI.jpg")
+        fig.savefig(f"./TargetFFI/{ticid}_M{target['G Group']}_FFI.jpg")
         plt.close()    
 
         print(f"Saved plot for target {target['TIC ID']}")
