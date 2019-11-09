@@ -1,5 +1,6 @@
 from astropy.io import ascii
 from lightkurve import TessTargetPixelFile, search_targetpixelfile, search_tesscut, TessLightCurveFile, MPLSTYLE
+from usefulFuncs import find_tpf, plot_frame
 from glob import glob
 from os import mkdir
 from os.path import isdir
@@ -9,26 +10,9 @@ import warnings
 
 percentile=80
 radius = 3
+sector = 8
+cutsize = 8
 
-def plot_frame(tpf, aperture=None, ax=None, savefn=None, frame=200, show_colorbar=True, **kwargs):
-    if not ax:
-        ax = plt.subplot(projection=tpf.wcs)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FutureWarning)
-        if aperture=='threshold':
-            aperture = tpf.create_threshold_mask()
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", RuntimeWarning)
-        tpf.plot(ax=ax, interpolation="nearest", aperture_mask=aperture,cmap="hot", scale='sqrt', frame=frame, show_colorbar=show_colorbar, **kwargs)
-    with plt.style.context(MPLSTYLE):
-        ax.set_ylabel('Declination')
-        ax.set_xlabel('Right Ascension')
-    
-    # IF want to save
-    if savefn:
-        plt.gcf().savefig(savefn)
-
-        
 if __name__ == '__main__':
     # Import target list
     targets = ascii.read('DataInput/cluster_targets_tic.ecsv')
@@ -69,7 +53,10 @@ if __name__ == '__main__':
     for target in targets:
         ticid = target['TIC ID']
         print(f"Downloading target pixel file for {target['TIC ID']}")
-        tpf = search_tesscut(ticid, sector=8).download(cutout_size=8)
+        tpf = find_tpf(ticid, sector=sector, cutsize=cutsize)
+        if not tpf:
+            print('\tSkipping Target Pixel File...')
+            continue
         target_apt = group_apts[target['G Group']-gmin]
 
         print(f"Creating plot for target {target['TIC ID']}")
@@ -121,36 +108,10 @@ if __name__ == '__main__':
             ax3.set_title('Threshold Ap')
             ax4.set_title('Percentile Ap')
 
-
-        # pad = 0.05 # Padding around the edge of the figure
-        # xpad, ypad = dx * pad, dx * pad
-        # fig.subplots_adjust(left=xpad, right=1-xpad, top=1-ypad, bottom=ypad)
-
         plt.tight_layout()
         plt.subplots_adjust(top=0.85, left=0.132, bottom=0.1),# wspace=0., hspace=0.2)
         fig.savefig(f"./TargetFFI/{ticid}_M{target['G Group']}_FFI.jpg")
         plt.close()    
 
         print(f"Saved plot for target {target['TIC ID']}")
-
-    
-#     # Plot and Save FFI w aperture
-#     ffiap_savefn = f"./TargetFFI_OldAp/{ticid}_M{target['G Group']}_FFIAP.jpg"
-#     plot_frame(tpf, aperture=target_apt, savefn=ffiap_savefn)
-    
-#     # Plot and Save FFI w/ Threshold Ap    
-#     ffiqap_savefn = f"./TargetFFI_ThreshAp/{ticid}_M{target['G Group']}_FFIThAP.jpg"
-#     with warnings.catch_warnings():
-#         warnings.simplefilter("ignore", RuntimeWarning)
-#         plot_frame(tpf, aperture='threshold', savefn=ffiqap_savefn)
-
-#     # Plot and Save FFI w/ Percentile Ap
-#     ffiperap_savefn = f"./TargetFFI_PercentiledAp/{ticid}_M{target['G Group']}_FFIPerAP.jpg"
-#     plot_frame(tpf, aperture=per_mask, savefn=ffiperap_savefn)
-    
-#     # Plot and Save FFI w/o Aperture
-#     ffi_savefn = f"./TargetFFI/{ticid}_M{target['G Group']}_FFI.jpg"
-#     plot_frame(tpf, savefn=ffi_savefn)    
-    
-    
     
