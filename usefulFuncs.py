@@ -1,21 +1,94 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from lightkurve import MPLSTYLE
+from astropy.io import ascii
+from astropy.table import Table
+from lightkurve import MPLSTYLE, TessTargetPixelFile, TessLightCurveFile
 from lightkurve import open as open_tpf
 from os.path import isfile, join
 from os import listdir
+from glob import glob
 import warnings
 import re
 
 
-def plot_frame(tpf, aperture=None, ax=None, savefn=None, frame=200, show_colorbar=True, **kwargs):
+def getOrigAps(target_table='DataInput/cluster_targets_tic.ecsv',
+               orig_samples='DataOutput/SampleTPFs/*.fits'):
+    """
+    Get original apertures that were manually selected during summer exploration 2019
+    :param target_table:
+    :param orig_samples:
+    :return: group apertures in uint8 array
+    """
+    # Import target list
+    if isinstance(target_table, str):
+        targets: Table = ascii.read(target_table)
+    else:
+        # Assume it is a table
+        targets: Table = target_table
+
+    sampletpfs = glob(orig_samples)
+
+    # Make parallel list of target names; convert ID's into integers
+    sample_targets = [filename.split('_')[1] for filename in sampletpfs]
+
+    # G Mag Group ranges
+    gmin, gmax = targets['G Group'].min(), targets['G Group'].max()
+
+    # Group Apertures
+    ap_shape = TessLightCurveFile(sampletpfs[0]).hdu[2].data.shape
+    num_groups = gmax - gmin + 1
+    group_apts = np.zeros((num_groups,) + ap_shape, dtype=np.uint8)
+
+    # Find Group Samples, and Calculate Apertures
+    for i, group in enumerate(range(gmin, gmax + 1)):
+        print(f'Collecting Group Samples for GMag={group}')
+        grows = targets['G Group'] == group
+        group_targets = targets[grows]['TIC ID']
+
+        apertures = []
+        for tpf, target in zip(sampletpfs, sample_targets):
+            if target in group_targets:
+                iapt = TessLightCurveFile(tpf).hdu[2].data
+                apertures.append(iapt)
+
+        group_apts[i] = np.sum(apertures, axis=0) > max(6, len(apertures))
+
+    return group_apts
+
+
+def getPercentileAp(tpf, radius=3, percentile=80):
+    """
+    Calculate percentile aperture of source in Target Pixel File
+    :param tpf: target pixel file, preferably small cutout
+    :param radius: constraint source to be this distance from the center
+    :param percentile: pixel values above this percentile count as source
+    :return: aperture mask
+    """
+    # Create percentile aperture
+    median_image = np.nanmedian(tpf.flux, axis=0)
+    rows, cols = median_image.shape
+    x, y = np.ogrid[-rows / 2:rows / 2, -cols / 2:cols / 2]
+    radius_mask = np.sqrt(x ** 2 + y ** 2) < radius
+    above_percentile = median_image > np.nanpercentile(median_image, percentile)
+    per_mask = above_percentile & radius_mask
+    return per_mask
+
+
+def plot_frame(tpf: TessTargetPixelFile, aperture=None, ax=None, savefn=None, frame=200, show_colorbar=True, **kwargs):
     """
     Function to plot TPF frame
     (optional) If aperture is 'threshold' string, a mask will be generated from
     the TPF native create_threshold_mask() function.
 
     :param tpf: target pixel file
-    :param aperture: aperture mask if any to plot over image
+    :param aperture: array-like, 'pipeline', 'all', 'threshold', or None
+        A boolean array describing the aperture such that `True` means
+        that the pixel will be used.
+        If None or 'all' are passed, all pixels will be used.
+        If 'pipeline' is passed, the mask suggested by the official pipeline
+        will be returned.
+        If 'threshold' is passed, all pixels brighter than 3-sigma above
+        the median flux will be used.
     :param ax: if given, the frame will plot on this axis
     :param savefn: safe filename if want to save file
     :param frame: frame # of TPF which to plot
@@ -24,14 +97,14 @@ def plot_frame(tpf, aperture=None, ax=None, savefn=None, frame=200, show_colorba
     """
     if not ax:
         ax = plt.subplot(projection=tpf.wcs)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FutureWarning)
-        if aperture == 'threshold':
-            aperture = tpf.create_threshold_mask()
+    # Set default plotting args
+    kwargs['interpolation'] = 'nearest'
+    kwargs['cmap'] = 'hot'
+    kwargs['scale'] = 'sqrt'
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
-        tpf.plot(ax=ax, interpolation="nearest", aperture_mask=aperture, cmap="hot",
-                 scale='sqrt', frame=frame, show_colorbar=show_colorbar, **kwargs)
+        tpf.plot(ax=ax, frame=frame, show_colorbar=show_colorbar, aperture_mask=aperture, **kwargs)
     with plt.style.context(MPLSTYLE):
         ax.set_ylabel('Declination')
         ax.set_xlabel('Right Ascension')
@@ -41,7 +114,7 @@ def plot_frame(tpf, aperture=None, ax=None, savefn=None, frame=200, show_colorba
 
 
 def find_tpf(ticid, sector=8, cutsize=8):
-    fname = f'./TESSCuts8/TPF{ticid}_S{sector}C{cutsize}.fits'
+    fname = f'./TESSCuts/TPF{ticid}_S{sector}C{cutsize}.fits'
     if isfile(fname):
         return open_tpf(fname)
     else:
