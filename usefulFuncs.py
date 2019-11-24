@@ -1,14 +1,15 @@
-import numpy as np
+import re
+import warnings
+from glob import glob
+from os import listdir
+from os.path import isfile, join
+
 import matplotlib.pyplot as plt
+import numpy as np
 from astropy.io import ascii
 from astropy.table import Table
 from lightkurve import MPLSTYLE, TessTargetPixelFile, TessLightCurveFile
 from lightkurve import open as open_tpf
-from os.path import isfile, join
-from os import listdir
-from glob import glob
-import warnings
-import re
 
 
 def getOrigAps(target_table='DataInput/cluster_targets_tic.ecsv',
@@ -56,12 +57,14 @@ def getOrigAps(target_table='DataInput/cluster_targets_tic.ecsv',
     return group_apts
 
 
-def getPercentileAp(tpf, radius=3, percentile=80):
+def getPercentileAp(tpf, radius=3, percentile=80, both=False, iterative=False):
     """
     Calculate percentile aperture of source in Target Pixel File
     :param tpf: target pixel file, preferably small cutout
     :param radius: constraint source to be this distance from the center
     :param percentile: pixel values above this percentile count as source
+    :param both: Whether to return the final aperture and the only-above-percentile aperture
+    :param iterative: whether to perform iterative process if mask has no pixels
     :return: aperture mask
     """
     # Create percentile aperture
@@ -69,9 +72,23 @@ def getPercentileAp(tpf, radius=3, percentile=80):
     rows, cols = median_image.shape
     x, y = np.ogrid[-rows / 2:rows / 2, -cols / 2:cols / 2]
     radius_mask = np.sqrt(x ** 2 + y ** 2) < radius
-    above_percentile = median_image > np.nanpercentile(median_image, percentile)
-    per_mask = above_percentile & radius_mask
-    return per_mask
+
+    origPer = percentile
+    atLastOnce = False
+    minPerc = 5 * origPer / 8
+    anyPerc = False
+
+    while (percentile > minPerc) and (iterative or not atLastOnce) and not anyPerc:
+        above_percentile = median_image > np.nanpercentile(median_image, percentile)
+        per_mask = above_percentile & radius_mask
+        anyPerc = np.any(per_mask)
+        percentile -= 5
+        atLastOnce = True
+
+    if both:
+        return per_mask, above_percentile
+    else:
+        return per_mask
 
 
 def plot_frame(tpf: TessTargetPixelFile, aperture=None, ax=None, savefn=None, frame=200, show_colorbar=True, **kwargs):
@@ -106,11 +123,12 @@ def plot_frame(tpf: TessTargetPixelFile, aperture=None, ax=None, savefn=None, fr
         warnings.simplefilter("ignore", RuntimeWarning)
         tpf.plot(ax=ax, frame=frame, show_colorbar=show_colorbar, aperture_mask=aperture, **kwargs)
     with plt.style.context(MPLSTYLE):
-        ax.set_ylabel('Declination')
-        ax.set_xlabel('Right Ascension')
+        ax.coords[0].set_axislabel('Right Ascension')
+        ax.coords[1].set_axislabel('Declination')
     # IF want to save
     if savefn:
         plt.gcf().savefig(savefn)
+    return ax
 
 
 def find_tpf(ticid, sector=8, cutsize=8):
