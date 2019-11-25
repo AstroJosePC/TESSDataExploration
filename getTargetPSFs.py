@@ -1,11 +1,11 @@
-from astropy.io import ascii
-from lightkurve import TessLightCurveFile, MPLSTYLE
-from usefulFuncs import find_tpf, plot_frame, getPercentileAp, getOrigAps
-from glob import glob
 from os import mkdir
 from os.path import isdir
-import numpy as np
+
 import matplotlib.pyplot as plt
+from astropy.io import ascii
+from lightkurve import MPLSTYLE
+
+from usefulFuncs import find_tpf, plot_frame, getPercentileAp, getOrigAps
 
 percentile = 80
 radius = 3
