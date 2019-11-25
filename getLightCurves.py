@@ -70,19 +70,27 @@ for tpf in all_tpfs:
 
     # There aren't a lot of ways to get a decent background
     # I think a good starting point is percentile aperture
-    mean, median, std = sigma_clipped_stats(tpf.flux, sigma=3.0,
-                                            mask=np.broadcast_to(above_percentile, tpf.shape),
-                                            axis=(1, 2))
+    mean_orig, median_orig, std_orig = sigma_clipped_stats(tpf.flux, sigma=3.0,
+                                                           mask=np.broadcast_to(tpf.pipeline_mask, tpf.shape),
+                                                           axis=(1, 2))
+
+    mean_thresh, median_thresh, std_thresh = sigma_clipped_stats(tpf.flux, sigma=3.0,
+                                                                 mask=np.broadcast_to(threshAp, tpf.shape),
+                                                                 axis=(1, 2))
+
+    mean_perc, median_perc, std_perc = sigma_clipped_stats(tpf.flux, sigma=3.0,
+                                                           mask=np.broadcast_to(percAp, tpf.shape),
+                                                           axis=(1, 2))
 
     # Background subtract and propagate error (ONLY USING MEAN)
-    lc_origbs.flux -= origPix * mean
-    lc_origbs.flux_err = np.sqrt(lc_origbs.flux_err ** 2 + (std * origPix) ** 2)
+    lc_origbs.flux -= origPix * mean_orig
+    lc_origbs.flux_err = np.sqrt(lc_origbs.flux_err ** 2 + (std_orig * origPix) ** 2)
 
-    lc_threshbs.flux -= threshPix * mean
-    lc_threshbs.flux_err = np.sqrt(lc_threshbs.flux_err ** 2 + (std * threshPix) ** 2)
+    lc_threshbs.flux -= threshPix * mean_thresh
+    lc_threshbs.flux_err = np.sqrt(lc_threshbs.flux_err ** 2 + (std_thresh * threshPix) ** 2)
 
-    lc_percbs.flux -= percPix * mean
-    lc_percbs.flux_err = np.sqrt(lc_percbs.flux_err ** 2 + (std * percPix) ** 2)
+    lc_percbs.flux -= percPix * mean_perc
+    lc_percbs.flux_err = np.sqrt(lc_percbs.flux_err ** 2 + (std_perc * percPix) ** 2)
 
     aps = [tpf.pipeline_mask, percAp, threshAp]
 
