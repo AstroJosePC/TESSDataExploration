@@ -5,6 +5,7 @@ from astropy.stats import sigma_clipped_stats
 from lightkurve import MPLSTYLE
 from lightkurve.utils import plot_image
 from matplotlib import patches
+from matplotlib.lines import Line2D
 
 from usefulFuncs import ifind_tpfs, getPercentileAp
 
@@ -24,7 +25,7 @@ radius = 3
 sector = 8
 cutsize = 8
 
-titles = 'Pipeline Ap', 'Percentile Ap', 'Threshold Ap'
+titles = 'Handpicked Ap', 'Percentile Ap', 'Threshold Ap'
 mask_color = 'pink'
 
 # Get all target pixel files
@@ -42,12 +43,18 @@ with fits.open('DataInput/ClusterQuality/Sector8_Sample.fits.gz') as quality_sam
 
     colors = ['k' if flag else 'red' for flag in bool_flags]
 
+lc_legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor='k', label='Good Quality', markersize=7),
+                     Line2D([0], [0], marker='o', color='w', markerfacecolor='red', label='Bad Quality', markersize=7)]
+
 for tpf in all_tpfs:
     # Get percentile aperture before disable default quality flags
     print(f'Calculating apertures for {tpf.targetid}')
+
+    # Get magnitude of star (G-band)
     gmag = find_mag(targets, tpf.targetid)
 
-    percAp, above_percentile = getPercentileAp(tpf, both=True, iterative=True)
+    # get the percentile, and threshold apertures
+    percAp, above_percentile = getPercentileAp(tpf, both=True, iterative=True, percentile=percentile)
     threshAp = tpf.create_threshold_mask()
 
     origPix = tpf.pipeline_mask.sum()
@@ -68,8 +75,7 @@ for tpf in all_tpfs:
     lc_threshbs = lc_thresh.copy()
     lc_percbs = lc_perc.copy()
 
-    # There aren't a lot of ways to get a decent background
-    # I think a good starting point is percentile aperture
+    # Get sigma clipped statistics per timestamp for each aperture type; masks source target
     mean_orig, median_orig, std_orig = sigma_clipped_stats(tpf.flux, sigma=3.0,
                                                            mask=np.broadcast_to(tpf.pipeline_mask, tpf.shape),
                                                            axis=(1, 2))
@@ -101,15 +107,16 @@ for tpf in all_tpfs:
     with plt.style.context(MPLSTYLE):
         print(f'Creating plot for target {tpf.targetid}')
         fig = plt.figure(figsize=(12, 12))
-        grid = plt.GridSpec(4, 3, hspace=0.6, wspace=0.1, bottom=0.05, left=0.08, right=1.,
-                            width_ratios=[1, 1, 1], height_ratios=[1, 1, 1, 1])
+        grid = plt.GridSpec(4, 3, hspace=0.58, wspace=0.1, bottom=0.05, left=0.065, right=1.,
+                            top=0.99, width_ratios=[1, 1, 1], height_ratios=[1, 1, 1, 1])
         top_shared = dict(aspect='equal', projection=tpf.wcs)
         ax1 = fig.add_subplot(grid[0, 0], **top_shared)
         ax2 = fig.add_subplot(grid[0, 1], sharey=ax1, sharex=ax1, **top_shared)
         ax3 = fig.add_subplot(grid[0, 2], sharey=ax1, sharex=ax1, **top_shared)
-        ax4 = fig.add_subplot(grid[1, :])
-        ax5 = fig.add_subplot(grid[2, :], sharey=ax4, sharex=ax4)
-        ax6 = fig.add_subplot(grid[3, :], sharey=ax4, sharex=ax4)
+
+        ax5 = fig.add_subplot(grid[2, :])  # sharey=ax4, sharex=ax4)
+        ax4 = fig.add_subplot(grid[1, :], sharey=ax5)  # sharex=ax5)
+        ax6 = fig.add_subplot(grid[3, :], sharey=ax5)  # sharex=ax5)
         axes = ax1, ax2, ax3
 
         ax1.coords[1].set_axislabel('')
@@ -119,32 +126,53 @@ for tpf in all_tpfs:
             ax.coords[0].set_axislabel('Right Ascension')
             ax.set_ylabel('')
             aperture_mask = tpf._parse_aperture_mask(ap)
-            ax.tick_params(axis='x', which='major', labelsize=10)
+            ax.tick_params(axis='both', which='major', labelsize=10, color='w')
             for i in range(tpf.shape[1]):
                 for j in range(tpf.shape[2]):
                     if aperture_mask[i, j]:
                         ax.add_patch(patches.Rectangle((j + tpf.column, i + tpf.row),
                                                        1, 1, color=mask_color, fill=True,
                                                        alpha=.6))
-        this, mask = lc_origbs.remove_outliers(sigma=2.5, return_mask=True)
-        this.scatter(ax=ax4, normalize=True, c=[c for c, b in [*zip(colors, ~mask)] if b],
-                     show_colorbar=False)
-        ax4.set_title('Pipeline Aperture LC')
+
         this2, mask = lc_percbs.remove_outliers(sigma=2.5, return_mask=True)
         this2.scatter(ax=ax5, normalize=True, c=[c for c, b in [*zip(colors, ~mask)] if b],
                       show_colorbar=False)
         ax5.set_title('Percentile Aperture LC')
+
+        this, mask = lc_origbs.remove_outliers(sigma=2.5, return_mask=True)
+        this.scatter(ax=ax4, normalize=True, c=[c for c, b in [*zip(colors, ~mask)] if b],
+                     show_colorbar=False, label='Bad Quality')
+        ax4.set_title('Handpicked Aperture LC')
+
         this3, mask = lc_threshbs.remove_outliers(sigma=2.5, return_mask=True)
         this3.scatter(ax=ax6, normalize=True, c=[c for c, b in [*zip(colors, ~mask)] if b],
                       show_colorbar=False)
         ax6.set_title('Threshold Aperture LC')
+
+        # Setting Y Limits
+        zthis = this.remove_outliers(sigma=2.5).flux
+        zthis2 = this2.remove_outliers(sigma=2.5).flux
+        zthis3 = this3.remove_outliers(sigma=2.5).flux
+
+        zthis /= zthis.mean()
+        zthis2 /= zthis2.mean()
+        zthis3 /= zthis3.mean()
+
+        ylim_min = np.mean([zthis.min(), zthis2.min(), zthis3.min()])
+        ylim_max = np.mean([zthis.max(), zthis2.max(), zthis3.max()])
+
+        ax5.set_ylim(ylim_min, ylim_max)
 
         ax1.coords[1].set_axislabel('Declination')
         ax4.set_xlabel('')
         ax5.set_xlabel('')
 
     print(f'Saving plot to LightCurvesPlots/{tpf.targetid}_M{gmag}_LCs.pdf')
-    fig.savefig(f'LightCurvesPlots/{tpf.targetid}_M{gmag}_LCs.pdf', dpi=150)
+
+    ax4.legend(handles=lc_legend_handles, loc='upper right',
+               bbox_to_anchor=(1.0, 1.23), ncol=2, fancybox=True, shadow=False)
+    # plt.show()
+    fig.savefig(f'LightCurvesPlots/{tpf.targetid}_M{gmag}_LCs.pdf', dpi=300)
     plt.close()
 
     # Save LC FITs
