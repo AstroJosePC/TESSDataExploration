@@ -1,0 +1,3 @@
+[submodule "k2spin"]
+	path = k2spin
+	url = https://github.com/stephtdouglas/k2spin.git
