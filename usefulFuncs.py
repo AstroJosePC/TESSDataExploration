@@ -13,6 +13,26 @@ from lightkurve import open as open_tpf
 from scipy.ndimage import label
 
 
+def decode_filename(filepath):
+    """
+    Function to decode LightCurveFITS filenames:
+    {TICID}{Type}.fits
+
+    Types: Threshold (TH), Pipeline (OR), Percentile (PER)
+
+    :param filepath: filepath to FITS file
+    :return: ticid, aperture type
+    """
+    ticid, code = reg.search(filepath).groups()
+    if code.upper() == 'TH':
+        ap_type = 'Threshold'
+    elif code.upper() == 'OR':
+        ap_type = 'Pipeline'
+    else:
+        ap_type = 'Percentile'
+    return ticid, ap_type
+
+
 def getOrigAps(target_table='DataInput/cluster_targets_tic.ecsv',
                orig_samples='DataOutput/SampleTPFs/*.fits'):
     """

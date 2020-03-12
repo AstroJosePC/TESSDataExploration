@@ -9,6 +9,7 @@ from lightkurve import open as open_lc
 from scipy.signal import argrelmax
 
 from k2spin import prot
+from usefulFuncs import decode_filename
 
 
 def find_mag(targets, ticid):
@@ -56,27 +57,6 @@ ls_results = dict()
 J_K = dict()
 
 force_targets = ['93269120', '93014257', '92583560', '93549309']
-
-
-def decode_filename(filepath):
-    """
-    Function to decode LightCurveFITS filenames:
-    {TICID}{Type}.fits
-
-    Types: Threshold (TH), Pipeline (OR), Percentile (PER)
-
-    :param filepath: filepath to FITS file
-    :return: ticid, aperture type
-    """
-    ticid, code = reg.search(filepath).groups()
-    if code.upper() == 'TH':
-        ap_type = 'Threshold'
-    elif code.upper() == 'OR':
-        ap_type = 'Pipeline'
-    else:
-        ap_type = 'Percentile'
-    return ticid, ap_type
-
 
 i = 0
 for i, fits_path in enumerate(fits_paths):
