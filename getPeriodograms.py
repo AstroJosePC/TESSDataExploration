@@ -59,6 +59,15 @@ force_targets = ['93269120', '93014257', '92583560', '93549309']
 
 
 def decode_filename(filepath):
+    """
+    Function to decode LightCurveFITS filenames:
+    {TICID}{Type}.fits
+
+    Types: Threshold (TH), Pipeline (OR), Percentile (PER)
+
+    :param filepath: filepath to FITS file
+    :return: ticid, aperture type
+    """
     ticid, code = reg.search(filepath).groups()
     if code.upper() == 'TH':
         ap_type = 'Threshold'
