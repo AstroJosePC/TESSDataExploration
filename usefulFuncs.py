@@ -12,6 +12,8 @@ from lightkurve import MPLSTYLE, TessTargetPixelFile, TessLightCurveFile
 from lightkurve import open as open_tpf
 from scipy.ndimage import label
 
+reg = re.compile(r'(\d{8,9})([OPT][RCH])')
+
 
 def decode_filename(filepath):
     """

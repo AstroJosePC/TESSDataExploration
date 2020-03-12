@@ -1,4 +1,3 @@
-import re
 from glob import iglob
 from os.path import join, isfile
 
@@ -25,7 +24,6 @@ def find_mag(targets, ticid):
 src_lcfs = 'LightCurvesFITS/*.fits'
 # fits_paths = iglob(src_lcfs)
 fits_paths = iglob(src_lcfs)
-reg = re.compile(r'(\d{8,9})([OPT][RCH])')
 
 # Import target list
 targets = ascii.read('DataInput/cluster_targets_tic.ecsv')
