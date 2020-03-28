@@ -1,6 +1,5 @@
 import numpy as np
 from astropy.convolution import Gaussian1DKernel, convolve, convolve_fft
-from astropy.stats import sigma_clip
 from lightkurve import LightCurve
 
 default_stddev, default_gauss_x = 3, 37
@@ -62,7 +61,7 @@ def error_estimate(orig_lc: LightCurve, kernel=None, sigma=3,
     :param boundary: flag indicating how to handle boundaries. See convolve or convolve_fft docs.
     :param sigma: Number of standard deviations to use for both the lower and upper clipping limit.
     :param maxiters: max number of sigma-clipping iterations to perform or None to clip until convergence is achieved
-    :return: return the Mean Absolute Error of the data in parts-per million (ppm)
+    :return: return the Median Absolute Error of the data in parts-per million (ppm)
     """
 
     if quality is None:
@@ -73,9 +72,13 @@ def error_estimate(orig_lc: LightCurve, kernel=None, sigma=3,
 
     # Calculate residuals, and sigma-clip them
     residuals = orig_lc.flux[quality] - smooth_lc[quality]
-    clipped_residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters, masked=True)
+    # clipped_residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters, masked=True)
 
-    return np.mean(np.abs(clipped_residuals)) * 1e6
+    # return the MAE of residuals
+    return np.median(np.abs(residuals))
+    # return np.median(np.abs(residuals)) * 1e6
+    # return np.mean(np.abs(residuals)) * 1e6
+    # return np.mean(np.abs(clipped_residuals)) * 1e6
 
 
 def amplitude_estimate(orig_lc: LightCurve, low=1, high=99, quality=None):
