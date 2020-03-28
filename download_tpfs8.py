@@ -5,10 +5,10 @@ Note: It will only be download the sector 8 frames
 TPF Naming notation:
     {TIC ID}_TPF_S{Sector#}C{CutoutSize}.fits
 """
-from lightkurve import search_tesscut
 from astropy.io import ascii
+from lightkurve import search_tesscut
+
 from usefulFuncs import getOrigAps
-import numpy as np
 
 sector = 8
 cutout_size = 8
@@ -33,6 +33,7 @@ for ticid, Ggroup in targets[['TIC ID', 'G Group']]:
     tpf = search_tesscut(ticid, sector=sector).download(cutout_size=cutout_size)
 
     # Write TIC ID and pipeline aperture to HDUs
+    tpf.hdu[0].header['TIC ID'] = ticid
     tpf.hdu[0].header['TICID'] = ticid
     tpf.hdu[2].data = apt
 
