@@ -7,12 +7,48 @@ from os.path import isfile, join
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import ascii
+from astropy.stats import sigma_clipped_stats
 from astropy.table import Table
-from lightkurve import MPLSTYLE, TessTargetPixelFile, TessLightCurveFile
+from lightkurve import MPLSTYLE, TessLightCurveFile, TessTargetPixelFile
 from lightkurve import open as open_tpf
 from scipy.ndimage import label
 
 reg = re.compile(r'(\d{8,9})([OPT][RCH])')
+
+
+def extract_lightcurve(tpf: TessTargetPixelFile, aperture_mask, sigma=3.0,
+                       remove_outlier=True, background_sub=False, return_mask=False):
+    """
+    Extract Background Subtracted Light Curve
+    Remove outliers (Optional)
+
+    :param tpf: TargetPixelFile containing all the target data
+    :param aperture_mask: A boolean array describing the aperture; `True` pixels are those inside aperture
+    :param sigma: The number of standard deviations to use for clipping limits
+    :param remove_outlier: Whether to remove outliers in returned Light Curve
+    :param background_sub: Whether to background subtract the light curve
+    :param return_mask: Whether to return a mask indicating which data points were removed
+    :return: TessLightCurve object with the processed data
+    """
+
+    lc_final = tpf.extract_aperture_photometry(aperture_mask=aperture_mask)
+
+    if background_sub:
+        pix_num = aperture_mask.sum()
+        # Get sigma clipped statistics per timestamp for each aperture type; masks source target
+        mean_orig, median_orig, std_orig = sigma_clipped_stats(tpf.flux, sigma=sigma,
+                                                               mask=np.broadcast_to(aperture_mask, tpf.shape),
+                                                               axis=(1, 2))
+
+        # Background subtract and propagate error (ONLY USING MEAN)
+        lc_final.flux -= pix_num * mean_orig
+        lc_final.flux_err = np.sqrt(lc_final.flux_err ** 2 + (std_orig * pix_num) ** 2)
+
+    if remove_outlier:
+        lc_final, mask = lc_final.remove_outliers(sigma=sigma, return_mask=True)
+        if return_mask:
+            return lc_final, mask
+    return lc_final
 
 
 def decode_filename(filepath):

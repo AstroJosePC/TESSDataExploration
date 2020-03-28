@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits, ascii
-from astropy.stats import sigma_clipped_stats
 from lightkurve import MPLSTYLE
 from lightkurve.utils import plot_image
 from matplotlib import patches
 from matplotlib.lines import Line2D
 
-from usefulFuncs import ifind_tpfs, getPercentileAp
+from usefulFuncs import ifind_tpfs, getPercentileAp, extract_lightcurve
 
 
 def find_mag(targets, ticid):
@@ -62,41 +61,14 @@ for tpf in all_tpfs:
     threshPix = threshAp.sum()
 
     # In order to use my own quality flags I must disable current flags
+    # Re-define the quality mask, and rewrite quality array in data fits
     tpf.quality_mask = np.ones(tpf.quality_mask.shape, dtype=bool)
     tpf.hdu[1].data['QUALITY'] = np.zeros(tpf.hdu[1].data['QUALITY'].shape, dtype=np.int32)
 
-    # Get full lightcurves of each
-    lc_orig = tpf.extract_aperture_photometry(aperture_mask='pipeline')
-    lc_thresh = tpf.extract_aperture_photometry(aperture_mask=threshAp)
-    lc_perc = tpf.extract_aperture_photometry(aperture_mask=percAp)
-
-    # Create copy of light curve to save background-subtracted ones
-    lc_origbs = lc_orig.copy()
-    lc_threshbs = lc_thresh.copy()
-    lc_percbs = lc_perc.copy()
-
-    # Get sigma clipped statistics per timestamp for each aperture type; masks source target
-    mean_orig, median_orig, std_orig = sigma_clipped_stats(tpf.flux, sigma=3.0,
-                                                           mask=np.broadcast_to(tpf.pipeline_mask, tpf.shape),
-                                                           axis=(1, 2))
-
-    mean_thresh, median_thresh, std_thresh = sigma_clipped_stats(tpf.flux, sigma=3.0,
-                                                                 mask=np.broadcast_to(threshAp, tpf.shape),
-                                                                 axis=(1, 2))
-
-    mean_perc, median_perc, std_perc = sigma_clipped_stats(tpf.flux, sigma=3.0,
-                                                           mask=np.broadcast_to(percAp, tpf.shape),
-                                                           axis=(1, 2))
-
-    # Background subtract and propagate error (ONLY USING MEAN)
-    lc_origbs.flux -= origPix * mean_orig
-    lc_origbs.flux_err = np.sqrt(lc_origbs.flux_err ** 2 + (std_orig * origPix) ** 2)
-
-    lc_threshbs.flux -= threshPix * mean_thresh
-    lc_threshbs.flux_err = np.sqrt(lc_threshbs.flux_err ** 2 + (std_thresh * threshPix) ** 2)
-
-    lc_percbs.flux -= percPix * mean_perc
-    lc_percbs.flux_err = np.sqrt(lc_percbs.flux_err ** 2 + (std_perc * percPix) ** 2)
+    # Extract sigma-clipped background subtracted light curves
+    lc_origbs, mask_orig = extract_lightcurve(tpf, tpf.pipeline_mask, background_sub=True, return_mask=True)
+    lc_threshbs, mask_thresh = extract_lightcurve(tpf, tpf.threshAp, background_sub=True, return_mask=True)
+    lc_percbs, mask_perc = extract_lightcurve(tpf, tpf.percAp, background_sub=True, return_mask=True)
 
     aps = [tpf.pipeline_mask, percAp, threshAp]
 
@@ -134,25 +106,22 @@ for tpf in all_tpfs:
                                                        1, 1, color=mask_color, fill=True,
                                                        alpha=.6))
 
-        this2, mask = lc_percbs.remove_outliers(sigma=2.5, return_mask=True)
-        this2.scatter(ax=ax5, normalize=True, c=[c for c, b in [*zip(colors, ~mask)] if b],
-                      show_colorbar=False)
+        lc_percbs.scatter(ax=ax5, normalize=True, c=[c for c, b in [*zip(colors, ~mask_perc)] if b],
+                          show_colorbar=False)
         ax5.set_title('Percentile Aperture LC')
 
-        this, mask = lc_origbs.remove_outliers(sigma=2.5, return_mask=True)
-        this.scatter(ax=ax4, normalize=True, c=[c for c, b in [*zip(colors, ~mask)] if b],
-                     show_colorbar=False, label='Bad Quality')
+        lc_origbs.scatter(ax=ax4, normalize=True, c=[c for c, b in [*zip(colors, ~mask_orig)] if b],
+                          show_colorbar=False, label='Bad Quality')
         ax4.set_title('Handpicked Aperture LC')
 
-        this3, mask = lc_threshbs.remove_outliers(sigma=2.5, return_mask=True)
-        this3.scatter(ax=ax6, normalize=True, c=[c for c, b in [*zip(colors, ~mask)] if b],
-                      show_colorbar=False)
+        lc_threshbs.scatter(ax=ax6, normalize=True, c=[c for c, b in [*zip(colors, ~mask_thresh)] if b],
+                            show_colorbar=False)
         ax6.set_title('Threshold Aperture LC')
 
         # Setting Y Limits
-        zthis = this.remove_outliers(sigma=2.5).flux
-        zthis2 = this2.remove_outliers(sigma=2.5).flux
-        zthis3 = this3.remove_outliers(sigma=2.5).flux
+        zthis = lc_origbs.remove_outliers(sigma=2.5).flux
+        zthis2 = lc_percbs.remove_outliers(sigma=2.5).flux
+        zthis3 = lc_threshbs.remove_outliers(sigma=2.5).flux
 
         zthis /= zthis.mean()
         zthis2 /= zthis2.mean()
