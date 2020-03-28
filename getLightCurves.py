@@ -23,8 +23,7 @@ percentile = 80
 radius = 3
 sector = 8
 cutsize = 8
-
-titles = 'Handpicked Ap', 'Percentile Ap', 'Threshold Ap'
+sigma = 3.0
 mask_color = 'pink'
 
 # Get all target pixel files
@@ -66,11 +65,9 @@ for tpf in all_tpfs:
     tpf.hdu[1].data['QUALITY'] = np.zeros(tpf.hdu[1].data['QUALITY'].shape, dtype=np.int32)
 
     # Extract sigma-clipped background subtracted light curves
-    lc_origbs, mask_orig = extract_lightcurve(tpf, tpf.pipeline_mask, background_sub=True, return_mask=True)
-    lc_threshbs, mask_thresh = extract_lightcurve(tpf, tpf.threshAp, background_sub=True, return_mask=True)
-    lc_percbs, mask_perc = extract_lightcurve(tpf, tpf.percAp, background_sub=True, return_mask=True)
-
-    aps = [tpf.pipeline_mask, percAp, threshAp]
+    lc_origbs = extract_lightcurve(tpf, tpf.pipeline_mask, background_sub=True, remove_outlier=False)
+    lc_threshbs = extract_lightcurve(tpf, tpf.threshAp, background_sub=True, remove_outlier=False)
+    lc_percbs = extract_lightcurve(tpf, tpf.percAp, background_sub=True, remove_outlier=False)
 
     frame = 300
     img_extent = (tpf.column, tpf.column + tpf.shape[2],
@@ -92,6 +89,10 @@ for tpf in all_tpfs:
         axes = ax1, ax2, ax3
 
         ax1.coords[1].set_axislabel('')
+
+        # Iterate over aperture photometry methods, and plot frames
+        titles = 'Handpicked Ap', 'Percentile Ap', 'Threshold Ap'
+        aps = [tpf.pipeline_mask, percAp, threshAp]
         for ax, title, ap in zip(axes, titles, aps):
             plot_image(tpf.flux[frame], ax=ax, title=title, show_colorbar=False, extent=img_extent)
             ax.coords.grid(True, color='white', ls='solid')
@@ -106,22 +107,26 @@ for tpf in all_tpfs:
                                                        1, 1, color=mask_color, fill=True,
                                                        alpha=.6))
 
-        lc_percbs.scatter(ax=ax5, normalize=True, c=[c for c, b in [*zip(colors, ~mask_perc)] if b],
-                          show_colorbar=False)
-        ax5.set_title('Percentile Aperture LC')
-
-        lc_origbs.scatter(ax=ax4, normalize=True, c=[c for c, b in [*zip(colors, ~mask_orig)] if b],
-                          show_colorbar=False, label='Bad Quality')
+        # Plot each light curve; remove outliers, create good/bad quality mask, and finally make scatter plot
+        lc_orig_clean, mask_orig = lc_origbs.remove_outliers(sigma=sigma, return_mask=True)
+        color_mask = [c for c, b in [*zip(colors, ~mask_orig)] if b]
+        lc_orig_clean.scatter(ax=ax4, normalize=True, c=color_mask, show_colorbar=False)
         ax4.set_title('Handpicked Aperture LC')
 
-        lc_threshbs.scatter(ax=ax6, normalize=True, c=[c for c, b in [*zip(colors, ~mask_thresh)] if b],
-                            show_colorbar=False)
+        lc_perc_clean, mask_perc = lc_percbs.remove_outliers(sigma=sigma, return_mask=True)
+        color_mask = [c for c, b in [*zip(colors, ~mask_perc)] if b]
+        lc_perc_clean.scatter(ax=ax5, normalize=True, c=color_mask, show_colorbar=False)
+        ax5.set_title('Percentile Aperture LC')
+
+        lc_thresh_clean, mask_thresh = lc_threshbs.remove_outliers(sigma=sigma, return_mask=True)
+        color_mask = [c for c, b in [*zip(colors, ~mask_thresh)] if b]
+        lc_thresh_clean.scatter(ax=ax6, normalize=True, c=color_mask, show_colorbar=False)
         ax6.set_title('Threshold Aperture LC')
 
-        # Setting Y Limits
-        zthis = lc_origbs.remove_outliers(sigma=2.5).flux
-        zthis2 = lc_percbs.remove_outliers(sigma=2.5).flux
-        zthis3 = lc_threshbs.remove_outliers(sigma=2.5).flux
+        # Setting Y Limits; further clip data points to reduce Y-axis window
+        zthis = lc_orig_clean.remove_outliers(sigma=2.5).flux
+        zthis2 = lc_perc_clean.remove_outliers(sigma=2.5).flux
+        zthis3 = lc_thresh_clean.remove_outliers(sigma=2.5).flux
 
         zthis /= zthis.mean()
         zthis2 /= zthis2.mean()
