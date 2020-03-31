@@ -1,3 +1,6 @@
+from os import mkdir
+from os.path import isdir
+
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits, ascii
@@ -31,6 +34,10 @@ all_tpfs = ifind_tpfs()
 
 # Import target list
 targets = ascii.read('DataInput/cluster_targets_tic.ecsv')
+
+# Create folder to save LightCurve FITS
+if not isdir('LightCurvesFITS'):
+    mkdir('LightCurvesFITS')
 
 # Get quality mask
 with fits.open('DataInput/ClusterQuality/Sector8_Sample.fits.gz') as quality_sample:
