@@ -10,8 +10,8 @@ def smooth_lightcurve(orig_lc: LightCurve, kernel=None, break_tolerance=5, convo
     Smooth a light curve with a given kernel through convolution.
 
     :param orig_lc: light curve to be smoothed.
-    :param kernel: The convolution kernel. Must be 1-Dimensional. Default Gaussian1DKernel
-    :param break_tolerance: tolerance for which to breake light curve into sub-lightcurves
+    :param kernel: The convolution kernel. Must be 1-Dimensional. Default Astropy's Gaussian1DKernel
+    :param break_tolerance: tolerance used to break light curve into sub-lightcurves
     :param convolution: convolution function; default astropy.stats..convolution
     :param kwargs: Keyword arguments to pass to the convolution function
     :return:
@@ -43,13 +43,12 @@ def smooth_lightcurve(orig_lc: LightCurve, kernel=None, break_tolerance=5, convo
             smooth_signal[l:h] = np.nanmedian(orig_lc.flux[l:h])
         else:
             # Convolve data
-            smooth_signal[l:h] = convolve(orig_lc.flux[l:h], kernel, **kwargs)
+            smooth_signal[l:h] = convolve_teq(orig_lc.flux[l:h], kernel, **kwargs)
 
     return smooth_signal
 
 
-def error_estimate(orig_lc: LightCurve, kernel=None, sigma=3,
-                   maxiters=3, quality=None, boundary=None, **kwargs):
+def error_estimate(orig_lc: LightCurve, kernel=None, quality=None, boundary=None, **kwargs):
     """
     Estimate the error of a light curve by smoothing the signal, and calculating the
     Mean Absolute Error of the original light curve compared to the smoothed signal.
@@ -59,8 +58,6 @@ def error_estimate(orig_lc: LightCurve, kernel=None, sigma=3,
     :param kernel: The convolution kernel. Must be 1-Dimensional. Default Gaussian1DKernel
     :param quality: mask array that has usable data for light curve
     :param boundary: flag indicating how to handle boundaries. See convolve or convolve_fft docs.
-    :param sigma: Number of standard deviations to use for both the lower and upper clipping limit.
-    :param maxiters: max number of sigma-clipping iterations to perform or None to clip until convergence is achieved
     :return: return the Median Absolute Error of the data in parts-per million (ppm)
     """
 
@@ -72,13 +69,9 @@ def error_estimate(orig_lc: LightCurve, kernel=None, sigma=3,
 
     # Calculate residuals, and sigma-clip them
     residuals = orig_lc.flux[quality] - smooth_lc[quality]
-    # clipped_residuals = sigma_clip(residuals, sigma=sigma, maxiters=maxiters, masked=True)
 
     # return the MAE of residuals
     return np.median(np.abs(residuals))
-    # return np.median(np.abs(residuals)) * 1e6
-    # return np.mean(np.abs(residuals)) * 1e6
-    # return np.mean(np.abs(clipped_residuals)) * 1e6
 
 
 def amplitude_estimate(orig_lc: LightCurve, low=1, high=99, quality=None):
