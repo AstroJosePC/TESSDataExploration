@@ -81,10 +81,17 @@ def decode_filename(filepath):
 def getOrigAps(target_table='DataInput/cluster_targets_tic.ecsv',
                orig_samples='DataOutput/SampleTPFs/*.fits'):
     """
-    Get original apertures that were manually selected during summer exploration 2019
-    :param target_table:
-    :param orig_samples:
-    :return: group apertures in uint8 array
+    Recalculate apertures that were manually selected during summer exploration 2019;
+    This function can only be used if the TPFs in `DataOutput/SampleTPFs` are the same ones I used
+    during my summer exploration 2019.
+
+    This function can still be used to calculate new apertures for a different sample of TPFs.
+
+    TODO: This function makes a lot of assumptions. Must make them explicit in documentation, and code.
+
+    :param target_table: Table with target's TIC ID's & group labels; if filepath must be readable by `astropy.ascii`
+    :param orig_samples: filepath to TPF samples to be used for aperture calculation
+    :return: Group apertures in uint8 array (number of groups, y-aperture size, x-aperture size)
     """
     # Import target list
     if isinstance(target_table, str):
