@@ -28,7 +28,7 @@ There are two folders included in this repository that showcase what this pipeli
 aperture methods we use, and their impact on the light curves.
 - DraftPeriodograms: These PDFs are simple periodogram plots produced from the three light curves for every target.
 
-- All scripts perform different tasks
+All scripts perform different tasks
   - download_tpfs8: This code will download IC2391's 118 Full Frame cut outs, and attach the handpicked apertures
   I created using the included sample TPFs. All TPFs are saved following this format: 
   TPF{ticid}_S{section}C{cutsize}.fits
