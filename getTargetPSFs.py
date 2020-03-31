@@ -1,3 +1,10 @@
+"""
+Create a 2x2 grid of plots showcasing the aperture selection methods for every IC2391 target.
+
+The plots will be saved in TargetFFI folder, with the following name format:  {TIC ID}_M{G-mag}_FFI.jpg
+where G-mag is the rounded G-band magnitude of the star.
+"""
+
 from os import mkdir
 from os.path import isdir
 
@@ -35,7 +42,7 @@ if __name__ == '__main__':
         print(f"Creating plot for target {ticid}")
 
         # Create percentile aperture
-        per_mask = getPercentileAp(tpf, radius, percentile)
+        per_mask = getPercentileAp(tpf, percentile)
 
         # Create a grid of plots
         nrows, ncols = 2, 2
