@@ -130,50 +130,28 @@ def getOrigAps(target_table='DataInput/cluster_targets_tic.ecsv',
     return group_apts
 
 
-def getPercentileAp(tpf, radius=3, percentile=80, both=False, iterative=False):
+def getPercentileAp(tpf, percentile=80, both=False):
     """
     Calculate percentile aperture of source in Target Pixel File
     Very persistent on getting pixels at radius
     :param tpf: target pixel file, preferably small cutout
-    :param radius: constraint source to be this distance from the center
     :param percentile: pixel values above this percentile count as source, decreases if iterative
     :param both: Whether to return the final aperture and the only-above-percentile aperture
-    :param iterative: whether to perform iterative process if mask has no pixels
     :return: aperture mask
     """
-    # Create percentile aperture
+    # Find all targets in image; those above the percentile mark
     median_image = np.nanmedian(tpf.flux, axis=0)
-    rows, cols = median_image.shape
-    x, y = np.ogrid[-rows / 2:rows / 2, -cols / 2:cols / 2]
-    radius_mask = np.sqrt(x ** 2 + y ** 2) < radius
-    per_mask = None
-
-    origPer = percentile
-    atLastOnce = False
-    minPerc = 5 * origPer / 8
-    anyPerc = False
-
-    above_percentile = (median_image > np.nanpercentile(median_image, percentile)) & radius_mask
-
-    if not np.any(above_percentile):
-        above_percentile = median_image > np.nanpercentile(median_image, percentile)
-
-    # while (percentile > minPerc) and (iterative or not atLastOnce) and not anyPerc:
-    #     above_percentile = median_image > np.nanpercentile(median_image, percentile)
-    #     per_mask = above_percentile & radius_mask
-    #     anyPerc = np.any(per_mask)
-    #     percentile -= 5
-    #     atLastOnce = True
+    above_percentile = median_image > np.nanpercentile(median_image, percentile)
 
     # Return only the contiguous region closest to `region`.
+    # Method borrowed from lightkurve create_threshold_mask() function
     reference_pixel = (tpf.shape[2] / 2, tpf.shape[1] / 2)
     # First, label all the regions:
     labels = label(above_percentile)[0]
     # For all pixels above threshold, compute distance to reference pixel:
     label_args = np.argwhere(labels > 0)
-    distances = [np.hypot(crd[0], crd[1])
-                 for crd in label_args - np.array([reference_pixel[1], reference_pixel[0]])]
-    # Which label corresponds to the closest pixel?
+    distances = [np.hypot(crd[0], crd[1]) for crd in label_args - np.array([reference_pixel[1], reference_pixel[0]])]
+    # Which label corresponds to the centermost pixel?
     closest_arg = label_args[np.argmin(distances)]
     closest_label = labels[closest_arg[0], closest_arg[1]]
     percentile_ap = labels == closest_label
