@@ -5,20 +5,33 @@ from lightkurve import LightCurve
 default_stddev, default_gauss_x = 3, 37
 
 
-def smooth_lightcurve(orig_lc: LightCurve, kernel=None, break_tolerance=5, convolution='convolve', **kwargs):
+def smooth_lightcurve(orig_lc: LightCurve, kernel=None, gauss_size=None, gauss_std=None,
+                      break_tolerance=5, convolution='convolve', **kwargs):
     """
     Smooth a light curve with a given kernel through convolution.
 
     :param orig_lc: light curve to be smoothed.
     :param kernel: The convolution kernel. Must be 1-Dimensional. Default Astropy's Gaussian1DKernel
+    :param gauss_size: Size of the default Gaussian kernel. Default: SQRT[ light curve length ]
+    :param gauss_std: Standard deviation of the default Gaussian kernel. Default: gauss_size / 10.0
     :param break_tolerance: tolerance used to break light curve into sub-lightcurves
     :param convolution: convolution function; default astropy.stats..convolution
     :param kwargs: Keyword arguments to pass to the convolution function
     :return:
     """
     if kernel is None:
-        # Create kernel
-        kernel = Gaussian1DKernel(stddev=default_stddev, x_size=default_gauss_x)
+        # Create Gaussian kernel
+        if gauss_size is None:
+            # Define odd gauss size ; method found from another project
+            gauss_size = int(np.sqrt(orig_lc.flux.size))
+            if gauss_size % 2 == 0:
+                gauss_size += 1
+        if gauss_std is None:
+            # Define standard deviation of Gaussian model; experimentally determined
+            gauss_std = gauss_size / 10.0
+        kernel = Gaussian1DKernel(stddev=gauss_std, x_size=gauss_size)
+
+    # Choose convolution method
     if convolution == 'convolve':
         convolve_teq = convolve
     elif convolution == 'fft':
@@ -27,6 +40,7 @@ def smooth_lightcurve(orig_lc: LightCurve, kernel=None, break_tolerance=5, convo
         raise ValueError(f'Wrong convolution technique "{convolution}"')
 
     # Split the lightcurve into segments by finding large gaps in time
+    # This segmentation method is borrowed from lightkurve flatten method
     dt = orig_lc.time[1:] - orig_lc.time[0:-1]
     cut = np.where(dt > break_tolerance * np.nanmedian(dt))[0] + 1
 
@@ -37,9 +51,9 @@ def smooth_lightcurve(orig_lc: LightCurve, kernel=None, break_tolerance=5, convo
 
     # Smooth each segment separately to avoid artifacts
     for l, h in zip(low, high):
-        gap_length = h - l
+        segment_length = h - l
         # If the segment is too short, just take the median
-        if np.any([default_gauss_x > gap_length, gap_length < break_tolerance]):
+        if np.any([default_gauss_x > segment_length, segment_length < break_tolerance]):
             smooth_signal[l:h] = np.nanmedian(orig_lc.flux[l:h])
         else:
             # Convolve data
