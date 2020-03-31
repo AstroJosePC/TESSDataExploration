@@ -16,7 +16,7 @@ from scipy.ndimage import label
 reg = re.compile(r'(\d{8,9})([OPT][RCH])')
 
 
-def extract_lightcurve(tpf: TessTargetPixelFile, aperture_mask, sigma=3.0,
+def extract_lightcurve(tpf: TessTargetPixelFile, aperture_mask, background_mask=None, sigma=3.0,
                        remove_outlier=True, background_sub=False, return_mask=False):
     """
     Extract Background Subtracted Light Curve
@@ -24,6 +24,7 @@ def extract_lightcurve(tpf: TessTargetPixelFile, aperture_mask, sigma=3.0,
 
     :param tpf: TargetPixelFile containing all the target data
     :param aperture_mask: A boolean array describing the aperture; `True` pixels are those inside aperture
+    :param background_mask: A boolean array describing the bkg aperture: `True` pixels are background pixels
     :param sigma: The number of standard deviations to use for clipping limits
     :param remove_outlier: Whether to remove outliers in returned Light Curve
     :param background_sub: Whether to background subtract the light curve
@@ -34,11 +35,17 @@ def extract_lightcurve(tpf: TessTargetPixelFile, aperture_mask, sigma=3.0,
     lc_final = tpf.extract_aperture_photometry(aperture_mask=aperture_mask)
 
     if background_sub:
+        if background_mask is None:
+            # If no background mask was given, at least mask the given source
+            background_mask = aperture_mask
+        else:
+            background_mask = ~background_mask
+
         pix_num = aperture_mask.sum()
         # Get sigma clipped statistics per timestamp for each aperture type; masks source target
         mean_orig, median_orig, std_orig = sigma_clipped_stats(tpf.flux, sigma=sigma,
-                                                               mask=np.broadcast_to(aperture_mask, tpf.shape),
-                                                               axis=(1, 2))
+                                                               mask=np.broadcast_to(background_mask, tpf.shape),
+                                                               axis=(1, 2), maxiters=3)
 
         # Background subtract and propagate error (ONLY USING MEAN)
         lc_final.flux -= pix_num * mean_orig
