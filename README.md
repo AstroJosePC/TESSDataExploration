@@ -22,6 +22,12 @@ All of them are open source and can be easily installed in any machine.
 WHAT DOES THE PIPELINE DO?
 ---------------------------
 
+There are two folders included in this repository that showcase what this pipeline produces. 
+
+- LightCurvesPlots: These PDFs files include a grid of plots that showcase our targets' TESS Full-Frame Images, the 
+aperture methods we use, and their impact on the light curves.
+- DraftPeriodograms: These PDFs are simple periodogram plots produced from the three light curves for every target.
+
 - All scripts perform different tasks
   - download_tpfs8: This code will download IC2391's 118 Full Frame cut outs, and attach the handpicked apertures
   I created using the included sample TPFs. All TPFs are saved following this format: 
@@ -33,3 +39,4 @@ WHAT DOES THE PIPELINE DO?
   aperture selection, finding TPFs, etc.
   - getPeriodograms: This script is a work in progress and will measure the periods and output a 
   periodogram plot for every target, and make a periods vs J-K plot.
+  
