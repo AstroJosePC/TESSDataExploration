@@ -23,8 +23,9 @@ WHAT DOES THE PIPELINE DO?
 ---------------------------
 
 - All scripts perform different tasks
-  - download_tpfs8: This code will use the sample TPFs included to download IC2391's 118 Full Frame cut outs. 
-  Each FITS file will have the following format: TPF{ticid}_S{section}C{cutsize}.fits
+  - download_tpfs8: This code will download IC2391's 118 Full Frame cut outs, and attach the handpicked apertures
+  I created using the included sample TPFs. All TPFs are saved following this format: 
+  TPF{ticid}_S{section}C{cutsize}.fits
   - get_TargetPSF: Create a 2x2 grid of plots showcasing the aperture selection methods for every IC2391 target.
   - getLightCurves: Extract background-subtracted light curves from all found TPFs for every aperture method, and 
   save the respective FITS files and a grid of plots with the frames and light curves per target.
