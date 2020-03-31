@@ -1,7 +1,7 @@
 # TESSDataExploration
 Explore TESS data on open cluster IC 2391 to create custom light curves, and measure rotation periods.
 
-Copyright 2019-2020 Jose Perez Chavez. 
+Copyright 2019-2020 Jose Perez Chavez.   
 This code uses Stephanie's k2spin module, and part of George Zhou download_pixfiles/getlightcurve method
 
 Use at your own risk. This is free software made available under the MIT License. For details see the LICENSE file.
@@ -10,6 +10,7 @@ DEPENDENCIES
 ------------
 
 This code makes use of the following python libraries:
+    
     + Numpy
     + Scipy
     + matplotlib
