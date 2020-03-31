@@ -5,6 +5,9 @@ Note: It will only be download the sector 8 frames
 TPF Naming notation:
     {TIC ID}_TPF_S{Sector#}C{CutoutSize}.fits
 """
+from os import mkdir
+from os.path import isdir
+
 from astropy.io import ascii
 from lightkurve import search_tesscut
 
@@ -22,6 +25,10 @@ group_apts = getOrigAps(targets)
 
 # Filename template
 template_fn = './TESSCuts/TPF{ticid}_S{sec}C{cutsize}.fits'
+
+# Create folder to save TPFs
+if not isdir('TESSCuts'):
+    mkdir('TESSCuts')
 
 # Download each TESS cuts for each target
 for ticid, Ggroup in targets[['TIC ID', 'G Group']]:
