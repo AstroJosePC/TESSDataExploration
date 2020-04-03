@@ -71,14 +71,18 @@ for i, fits_path in enumerate(fits_paths):
         continue
 
     # if (gmag > 14) or isfile(savepath) and (ticid not in force_targets):
-    # if gmag > 14:
-    #     continue
+    # Focus on bright targets for now
+    if gmag > 14:
+        continue
 
-    j_k = targets['J'][targets['TIC ID'] == ticid][0] - targets['K'][targets['TIC ID'] == ticid][0]
+    # Get J-K temp proxy
+    j_mag = targets['J'][targets['TIC ID'] == ticid][0]
+    k_mag = targets['K'][targets['TIC ID'] == ticid][0]
+    j_k = j_mag - k_mag
 
+    # Import Light Curve, and calculate periodogram
     print(f'Creating periodogram for {ticid}-{ap_type}')
-    lcf = open_lc(fits_path)
-    lc = lcf.get_lightcurve('FLUX').remove_outliers(sigma=outlier_sigma)
+    lc = open_lc(fits_path).get_lightcurve('FLUX').remove_outliers(sigma=outlier_sigma).normalize()
 
     fund_period, fund_power, periods_to_test, periodogram, aliases, sigmas = prot.run_ls(lc.time, lc.flux, lc.flux_err,
                                                                                          threshold, prot_lims=prot_lims,
