@@ -1,8 +1,10 @@
 from glob import iglob
-from os.path import join, isfile
+from os.path import join
 
+import astropy.units as u
 import matplotlib.pyplot as plt
 from astropy.io import ascii
+from astropy.table import Table
 from lightkurve import MPLSTYLE
 from lightkurve import open as open_lc
 from scipy.signal import argrelmax
@@ -27,6 +29,7 @@ fits_paths = iglob(src_lcfs)
 
 # Import target list
 targets = ascii.read('DataInput/cluster_targets_tic.ecsv')
+ticids = targets['TIC ID']
 
 pgs_savepath = 'DraftPeriodograms'
 
@@ -48,13 +51,21 @@ outlier_sigma = 2.5
 threshold = 1.
 prot_lims = (0.1, 28.)
 
-fund_periods = dict()
+# Structure: fund_periods[`TICID`][`AP_TYPE`]; Initialize
+# Types: Threshold (TH), Pipeline (OR), Percentile (PER)
+aperture_types = 'Threshold', 'Pipeline', 'Percentile'
 all_ticids = []
+all_j_k = []
+all_aptypes = []
+fund_powers = []
+fund_periods = []
+low_sigmas = []
 periodograms = dict()
 ls_results = dict()
 J_K = dict()
 
-force_targets = ['93269120', '93014257', '92583560', '93549309']
+# force_targets = ['93269120', '93014257', '92583560', '93549309']
+force_targets = []
 
 i = 0
 for i, fits_path in enumerate(fits_paths):
@@ -65,14 +76,10 @@ for i, fits_path in enumerate(fits_paths):
     savepath = join(pgs_savepath, f'{ticid}PG-{ap_type}-M{gmag}.pdf')
 
     if not force_targets:
-        if (gmag > 14) or isfile(savepath):
+        # or isfile(savepath):
+        if (gmag > 14):
             continue
     elif ticid not in force_targets:
-        continue
-
-    # if (gmag > 14) or isfile(savepath) and (ticid not in force_targets):
-    # Focus on bright targets for now
-    if gmag > 14:
         continue
 
     # Get J-K temp proxy
@@ -82,20 +89,26 @@ for i, fits_path in enumerate(fits_paths):
 
     # Import Light Curve, and calculate periodogram
     print(f'Creating periodogram for {ticid}-{ap_type}')
-    lc = open_lc(fits_path).get_lightcurve('FLUX').remove_outliers(sigma=outlier_sigma).normalize()
+    lc = open_lc(fits_path).get_lightcurve('FLUX').remove_outliers(sigma=outlier_sigma)
 
     fund_period, fund_power, periods_to_test, periodogram, aliases, sigmas = prot.run_ls(lc.time, lc.flux, lc.flux_err,
                                                                                          threshold, prot_lims=prot_lims,
                                                                                          run_bootstrap=True)
+
+    pg_table = Table(data=(periods_to_test * u.day, periodogram * u.dimensionless_unscaled),
+                     names=('period', 'power'),
+                     meta=dict(ticid=ticid, aperture=ap_type, fits_path=fits_path, g_group=gmag, j_k=j_k,
+                               aliases=aliases, sigmas=sigmas))
+    pg_table.write(f'PGs_FITS/{ticid}PG-{ap_type}-M{gmag}.fits', overwrite=True)
+
     print(f'Found best period:\t{fund_period}')
-    ikey = f'{ticid}-{ap_type}'
 
-    if ticid not in all_ticids:
-        all_ticids.append(ticid)
-
-    J_K[ticid] = j_k
-    ls_results[ikey] = fund_period, fund_power, aliases, sigmas
-    periodograms[ikey] = periods_to_test, periodogram
+    fund_periods.append(fund_period)
+    fund_powers.append(fund_power)
+    low_sigmas.append(sigmas[0])
+    all_ticids.append(ticid)
+    all_aptypes.append(ap_type)
+    all_j_k.append(j_k)
 
     # Find local maxima in data; most credible periods
     peaks = argrelmax(periodogram)[0]
@@ -130,9 +143,13 @@ for i, fits_path in enumerate(fits_paths):
     print(f'Saving figure to {savepath}')
     plt.savefig(savepath, dpi=150)
     plt.close()
-#     break
-
 print('Done')
+
+# This master table contains all the data we need to make master plot
+master_table = Table(data=(all_ticids, all_aptypes, all_j_k, fund_periods, fund_powers, low_sigmas),
+                     names=('tic id', 'ap type', 'j-k', 'period', 'power', 'sigma'))
+
+master_table.write('master_table.fits', overwrite=True)
 # if not np.any(np.isclose(fund_period, prot_lims)):
 #     if ticid not in ticids:
 #         J_K.append(j_k)
