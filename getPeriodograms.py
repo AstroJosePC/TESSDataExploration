@@ -1,16 +1,22 @@
-from glob import iglob
-from os.path import join
+from glob import iglob, glob
+from os.path import join, isdir, isfile
+from os import mkdir
+from tqdm import tqdm
+from warnings import catch_warnings, simplefilter
 
 import astropy.units as u
 import matplotlib.pyplot as plt
-from astropy.io import ascii
-from astropy.table import Table
+from astropy.io import ascii, fits
+from astropy.table import Table, QTable
+from astropy.io.fits.verify import VerifyWarning
 from lightkurve import MPLSTYLE
 from lightkurve import open as open_lc
 from scipy.signal import argrelmax
+import numpy as np
 
 from k2spin import prot
 from usefulFuncs import decode_filename
+from LCFeatureExtraction import error_estimate
 
 
 def find_mag(targets, ticid):
@@ -25,26 +31,22 @@ def find_mag(targets, ticid):
 
 src_lcfs = 'LightCurvesFITS/*.fits'
 # fits_paths = iglob(src_lcfs)
-fits_paths = iglob(src_lcfs)
+fits_paths = glob(src_lcfs)
 
 # Import target list
 targets = ascii.read('DataInput/cluster_targets_tic.ecsv')
 ticids = targets['TIC ID']
 
+# Create directories for outputs
 pgs_savepath = 'DraftPeriodograms'
+pgs_fits_savepath = 'PGs_FITS'
 
-# num_terms is the number of terms for which the fourier expansion is done (how complex are the oscillations?)
-num_terms = 1
-# Min_period is the minimum detectable period
-min_period = 0.1
-# max_period is the maximum detectable period
-max_period = 28.
+if not isdir(pgs_savepath):
+    mkdir(pgs_savepath)
+if not isdir(pgs_fits_savepath):
+    mkdir(pgs_fits_savepath)
 
-ov_sampling = 150
-un_sampling = 10
-
-power_cutoff = 75  # percentile
-
+# PROGRAM PARAMETERS
 outlier_sigma = 2.5
 
 # Parameters for LS & bootstrap algorithm
@@ -54,163 +56,116 @@ prot_lims = (0.1, 28.)
 # Structure: fund_periods[`TICID`][`AP_TYPE`]; Initialize
 # Types: Threshold (TH), Pipeline (OR), Percentile (PER)
 aperture_types = 'Threshold', 'Pipeline', 'Percentile'
-all_ticids = []
-all_j_k = []
-all_aptypes = []
-fund_powers = []
-fund_periods = []
-low_sigmas = []
-periodograms = dict()
-ls_results = dict()
-J_K = dict()
+lc_paths = []
 
 # force_targets = ['93269120', '93014257', '92583560', '93549309']
 force_targets = []
 
-i = 0
-for i, fits_path in enumerate(fits_paths):
-    # fits_path = fits_paths[25]
-    ticid, ap_type = decode_filename(fits_path)
+# Get quality mask
+with fits.open('DataInput/ClusterQuality/Sector8_Sample.fits.gz') as quality_sample:
+    # For Chelsea's quality flags:
+    #   0 means good, 1 means bad
+    quality_flags = quality_sample[1].data['quality']
+    good_mask = ~quality_flags.astype(bool)
+
+# Iterave over all targets, and find its light curve with lowest noise;
+# Also, filter out those we do not need to calculate
+for ticid in ticids:
+    # By sorting them, I get: Handpicked Ap, Percentile Ap, Threshold Ap
+    apt_paths = sorted([fits_path for fits_path in fits_paths if ticid in fits_path])
+    sigmas = np.zeros(len(apt_paths))
+
+    for i, apt_path in enumerate(apt_paths):
+        clipped_lc, clipped_mask = open_lc(apt_path).get_lightcurve('FLUX').remove_outliers(sigma=outlier_sigma,
+                                                                                            return_mask=True)
+        sigmas[i] = error_estimate(clipped_lc, quality=good_mask[~clipped_mask])
+    
+    # Get the index of the path to light curve with lowest noise
+    idx = sigmas.argmin()
+    
+    # Decode filename
+    ap_type = decode_filename(apt_paths[idx])[1]
     gmag = find_mag(targets, ticid)
-
-    savepath = join(pgs_savepath, f'{ticid}PG-{ap_type}-M{gmag}.pdf')
-
-    if not force_targets:
-        # or isfile(savepath):
-        if (gmag > 14):
-            continue
-    elif ticid not in force_targets:
+    
+    # Generate save paths
+    pg_savepath = join(pgs_savepath, f'{ticid}PG-{ap_type}-M{gmag}.pdf')
+    pg_fits_savepath = f'{pgs_fits_savepath}/{ticid}PG-{ap_type}-M{gmag}.fits'
+    
+    # If periodogram info exists, and we aren't forcing the target, then skip file
+    if isfile(pg_savepath) and isfile(pg_fits_savepath) and (ticid not in force_targets):
         continue
-
-    # Get J-K temp proxy
-    j_mag = targets['J'][targets['TIC ID'] == ticid][0]
-    k_mag = targets['K'][targets['TIC ID'] == ticid][0]
-    j_k = j_mag - k_mag
-
-    # Import Light Curve, and calculate periodogram
-    print(f'Creating periodogram for {ticid}-{ap_type}')
-    lc = open_lc(fits_path).get_lightcurve('FLUX').remove_outliers(sigma=outlier_sigma)
-
-    fund_period, fund_power, periods_to_test, periodogram, aliases, sigmas = prot.run_ls(lc.time, lc.flux, lc.flux_err,
-                                                                                         threshold, prot_lims=prot_lims,
-                                                                                         run_bootstrap=True)
-
-    pg_table = Table(data=(periods_to_test * u.day, periodogram * u.dimensionless_unscaled),
-                     names=('period', 'power'),
-                     meta=dict(ticid=ticid, aperture=ap_type, fits_path=fits_path, g_group=gmag, j_k=j_k,
-                               aliases=aliases, sigmas=sigmas))
-    pg_table.write(f'PGs_FITS/{ticid}PG-{ap_type}-M{gmag}.fits', overwrite=True)
-
-    print(f'Found best period:\t{fund_period}')
-
-    fund_periods.append(fund_period)
-    fund_powers.append(fund_power)
-    low_sigmas.append(sigmas[0])
-    all_ticids.append(ticid)
-    all_aptypes.append(ap_type)
-    all_j_k.append(j_k)
-
-    # Find local maxima in data; most credible periods
-    peaks = argrelmax(periodogram)[0]
-
-    # Remove any peak below threshold
-    acceptable_peaks = periodogram[peaks] > sigmas[0]
-    new_peaks = peaks[acceptable_peaks]
-    period_peaks = periods_to_test[new_peaks]
-
-    with plt.style.context(MPLSTYLE):
-        fig, ax = plt.subplots(figsize=(12, 8))
-
-        pg_curve = ax.plot(periods_to_test, periodogram, 'b-', lw=1.5)
-        ax.set_xlabel('Periods [days]', fontsize=18)
-        ax.set_ylabel('Normalized Power', fontsize=18)
-        ax.set_title(f'Periodogram for TICID {ticid}', fontsize=20)
-        threshold_line = ax.axhline(sigmas[0], color='green', linestyle='-.', lw=1.5)
-
-        for period_peak in period_peaks:
-            red_dash = ax.axvline(period_peak, ls='--', c='#eb6060', lw=1.5)  # light red shade
-
-        main_red = ax.axvline(fund_period, c='#ad2d2d', lw=1.5)  # dark red shade
-
-        ax.set_xlim(0, 24)
-        curves = [pg_curve[0], red_dash, threshold_line, main_red]
-        curve_labels = ['Periodogram', 'Peaks', 'Threshold', 'Best Period']
-
-        ax.legend(curves, curve_labels, fontsize=14)
-        ax.text(fund_period + 0.5, fund_power, rf'Period={fund_period:0.2f}d', fontsize=14)
-        ax.tick_params(axis='both', labelsize=14)
-
-    print(f'Saving figure to {savepath}')
-    plt.savefig(savepath, dpi=150)
-    plt.close()
-print('Done')
-
-# This master table contains all the data we need to make master plot
-master_table = Table(data=(all_ticids, all_aptypes, all_j_k, fund_periods, fund_powers, low_sigmas),
-                     names=('tic id', 'ap type', 'j-k', 'period', 'power', 'sigma'))
-
-master_table.write('master_table.fits', overwrite=True)
-# if not np.any(np.isclose(fund_period, prot_lims)):
-#     if ticid not in ticids:
-#         J_K.append(j_k)
-#         ticids.append(ticid)
-#         fund_periods[ticid] = [fund_period,]
-#     else:
-#         fund_periods[ticid].append(fund_period)
-#
-# plt.show()
-
-# plt.scatter(J_K, fund_periods)
-# plt.title('found periods in IC2391 <14Mags')
-# plt.savefig('periods.jpg', dpi=150)
-# plt.close()
-
-# th_periods = []
-# pipe_periods = []
-# perc_periods = []
-# ordered_mags = []
-#
-# for ticid in all_ticids:
-#     th_key = f'{ticid}-Threshold'
-#     if th_key in ls_results:
-#         th_periods.append(ls_results[th_key][0])
-#     else:
-#         th_periods.append(np.nan)
-#
-#     pipe_key = f'{ticid}-Pipeline'
-#     if pipe_key in ls_results:
-#         pipe_periods.append(ls_results[pipe_key][0])
-#     else:
-#         pipe_periods.append(np.nan)
-#
-#     perc_key = f'{ticid}-Percentile'
-#     if perc_key in ls_results:
-#         perc_periods.append(ls_results[perc_key][0])
-#     else:
-#         perc_periods.append(np.nan)
-#
-#     ordered_mags.append(J_K[ticid])
+    else:
+        lc_paths.append(apt_paths[idx])
 
 
-# # Undersample periodogram to get a feeling on main local maxima
-# pg = lc.to_periodogram(method='lombscargle', minimum_period=min_period*u.day, maximum_period=max_period*u.day,
-#                        nterms=num_terms, oversample_factor=un_sampling)
+# Setup progress bar as context manager
+with tqdm(total=len(lc_paths), unit='pg') as pbar:
+    # Iterate over light curve paths, calculate their periodograms, and save data
+    for i, lc_path in enumerate(lc_paths):
+        ticid, ap_type = decode_filename(lc_path)
+        gmag = find_mag(targets, ticid)
+        
+        # Pre-generate save paths
+        pg_savepath = join(pgs_savepath, f'{ticid}PG-{ap_type}-M{gmag}.pdf')
+        pg_fits_savepath = f'{pgs_fits_savepath}/{ticid}PG-{ap_type}-M{gmag}.fits'
+        
+        # Get J-K temp proxy
+        j_mag = targets['J'][targets['TIC ID'] == ticid][0]
+        k_mag = targets['K'][targets['TIC ID'] == ticid][0]
+        j_k = j_mag - k_mag
 
-# # Find local maxima in data; most credible periods
-# peaks = argrelmax(pg.power)[0]
-#
-# top_10_peaks = peaks[pg.power[peaks].argsort()[:-10:-1]]
-#
-# period_peaks = pg.period[top_10_peaks]
-#
-# # Plot periodogram in period domain!!
-# ax = pg.plot(scale='linear', view='period', title='Periodogram')
-#
-# for period_peak in period_peaks:
-#     plt.axvline(period_peak.value, ls='--', c='red')
-#
-# max_period_plot = min(period_peaks.max().value + 1., pg.period.max().value)
-# max_power_plot = min(pg.power[top_10_peaks].max().value + 20., pg.power.max().value)
-# plt.xlim(0, max_period_plot)
-# plt.ylim(0, max_power_plot)
-# plt.show()
+        # Update progress bar, import Light Curve, and calculate periodogram
+        pbar.set_description(f'{ticid}-{ap_type}')
+        lc = open_lc(lc_path).get_lightcurve('FLUX').remove_outliers(sigma=outlier_sigma)
+        
+        # Run LombScarlge Periodogram
+        pbar.set_postfix(Status='Running LS')
+        fund_period, fund_power, periods_to_test, periodogram, aliases, sigmas = prot.run_ls(lc.time, lc.flux, lc.flux_err,
+                                                                                             threshold, prot_lims=prot_lims,
+                                                                                             run_bootstrap=True)
+        
+        pbar.set_postfix(Status='Saving PG FITS')
+        meta_info = {'TICID':ticid, 'aperture':ap_type, 'gmag':gmag, 'jkmag':j_k, 'sig99p':sigmas[0]}
+        with catch_warnings():
+            simplefilter('ignore', VerifyWarning)
+            pg_table = QTable(data=(periods_to_test * u.day, periodogram), 
+                              names=('period', 'power'), meta=meta_info)
+            pg_table.write(pg_fits_savepath, overwrite=True)
+        pbar.set_postfix(Status=f'Found period={fund_period:.2f} days')
+
+        # Find local maxima in data; most credible periods
+        peaks = argrelmax(periodogram)[0]
+
+        # Remove any peak below threshold
+        acceptable_peaks = periodogram[peaks] > sigmas[0]
+        new_peaks = peaks[acceptable_peaks]
+        period_peaks = periods_to_test[new_peaks]
+        
+        pbar.set_postfix(Status='Making plot')
+        with plt.style.context(MPLSTYLE):
+            fig, ax = plt.subplots(figsize=(12, 8))
+
+            pg_curve = ax.plot(periods_to_test, periodogram, 'b-', lw=1.5)
+            ax.set_xlabel('Periods [days]', fontsize=18)
+            ax.set_ylabel('Normalized Power', fontsize=18)
+            ax.set_title(f'Periodogram for TICID {ticid}', fontsize=20)
+            threshold_line = ax.axhline(sigmas[0], color='green', linestyle='-.', lw=1.5)
+
+            for period_peak in period_peaks:
+                red_dash = ax.axvline(period_peak, ls='--', c='#eb6060', lw=1.5)  # light red shade
+
+            main_red = ax.axvline(fund_period, c='#ad2d2d', lw=1.5)  # dark red shade
+
+            ax.set_xlim(0, 24)
+            curves = [pg_curve[0], red_dash, threshold_line, main_red]
+            curve_labels = ['Periodogram', 'Peaks', 'Threshold', 'Best Period']
+
+            ax.legend(curves, curve_labels, fontsize=14)
+            ax.text(fund_period + 0.5, fund_power, rf'Period={fund_period:0.2f}d', fontsize=14)
+            ax.tick_params(axis='both', labelsize=14)
+
+        plt.savefig(pg_savepath, dpi=150)
+        plt.close()
+        
+        pbar.set_postfix(Status=f'Plot saved as {ticid}PG-{ap_type}-M{gmag}.pdf')
+        pbar.update()
