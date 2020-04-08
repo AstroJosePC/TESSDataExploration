@@ -55,10 +55,7 @@ indx_points = (0.5 < fund_periods)  & (fund_periods < 28.0)
 periods = fund_periods[indx_points]
 mags = all_j_k[indx_points]
 num_periods = periods.size
-
 max_period = periods.argmax()
-print('max period, mag')
-print(periods[max_period], mags[max_period])
 
 # Convert periods to angular velocity in units of solar angular velocity
 # omega_sun=2.87 × 10^−6 s^−1. From Gallet&Bouvier 2013 -->  Weber & Davis 1967
