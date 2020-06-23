@@ -1,5 +1,7 @@
 # Notes on lightkurve_##mag notebooks
 
+This text file serves as legacy notes from the Summer 2019. They describe the early project creation, my findings, and learning experiences as I produced the aperture methods, light curves, and periodograms. They are quite old, but I think they are important to keep around. They should still probably be moved to a better location.
+
 
 ## Notes on 7/26
 I decided to export the targets table with a column with the group label for each target instead of repeating the grouping process in the notebooks.
