@@ -1,3 +1,7 @@
+"""
+This script/module simply holds useful functions that will be shared across the repository in order to reduce repetitiveness.
+"""
+
 import re
 import warnings
 from glob import glob
@@ -210,23 +214,25 @@ def find_tpf(ticid, sector=8, cutsize=8):
         print(f'Target Pixel File w/ TICID={ticid} not found')
 
 
-def find_tpfs(ticids=None, sectors=None, cutsizes=None):
+def find_tpfs(ticids=None, sectors=None, cutsizes=None, tpf_folder='TESSCuts'):
     """
     Retrieve Target Pixel Files from saved cutouts
     :param ticids: list of TIC IDs of targets, string or list
     :param sectors: sectors for which to retrieve, int or list
     :param cutsizes: cut out sizes for which to retrieve, int or list
+    :param tpf_folder: folder where TPFs are stored.
     :return: list of target pixel file objects
     """
-    return [*ifind_tpfs(ticids=ticids, sectors=sectors, cutsizes=cutsizes)]
+    return [*ifind_tpfs(ticids=ticids, sectors=sectors, cutsizes=cutsizes, tpf_folder=tpf_folder)]
 
 
-def ifind_tpfs(ticids=None, sectors=None, cutsizes=None):
+def ifind_tpfs(ticids=None, sectors=None, cutsizes=None, tpf_folder='TESSCuts'):
     """
     Retrieve Target Pixel Files from saved cutouts; as a generator
     :param ticids: list of TIC IDs of targets, string or list
     :param sectors: sectors for which to retrieve, int or list
     :param cutsizes: cut out sizes for which to retrieve, int or list
+    :param tpf_folder: folder where TPFs are stored.
     :return: generator of target pixel file objects
     """
     template_fn = r'^TPF{ticid}_S{sec}C{cut}.fits$'
@@ -239,7 +245,7 @@ def ifind_tpfs(ticids=None, sectors=None, cutsizes=None):
         cutsarr = np.atleast_1d(cutsizes)
         cuts = fr'({"|".join(cutsarr)})'
 
-    all_tpfs = listdir('TESSCuts')
+    all_tpfs = listdir(tpf_folder)
 
     if not ticids:
         ticidsre = r'\d{8,9}'
@@ -250,5 +256,5 @@ def ifind_tpfs(ticids=None, sectors=None, cutsizes=None):
     regexp = re.compile(template_fn.format(ticid=ticidsre, sec=secs, cut=cuts))
     for tpf in all_tpfs:
         if regexp.match(tpf):
-            tpf_fn = join('.', 'TESSCuts', tpf)
+            tpf_fn = join('.', tpf_folder, tpf)
             yield open_tpf(tpf_fn)

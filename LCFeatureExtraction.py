@@ -1,3 +1,11 @@
+"""
+This script/module includes the functions to produce the noise estimate used to 
+determine the best aperture method to use. This function is used in getPeriodograms.py.
+This script includes a way to estimate the amplitude of a light curve signal;
+but is depracated since it did not yield good results in determining best light curve.
+See LCQualityIndicator.ipynb for more details.
+"""
+
 import numpy as np
 from astropy.convolution import Gaussian1DKernel, convolve, convolve_fft
 from lightkurve import LightCurve
@@ -9,6 +17,8 @@ def smooth_lightcurve(orig_lc: LightCurve, kernel=None, gauss_size=None, gauss_s
                       break_tolerance=5, convolution='convolve', **kwargs):
     """
     Smooth a light curve with a given kernel through convolution.
+    This function uses a method to split the light curve into sections that should be
+    treated independently borrowed from the lightkurve library.
 
     :param orig_lc: light curve to be smoothed.
     :param kernel: The convolution kernel. Must be 1-Dimensional. Default Astropy's Gaussian1DKernel

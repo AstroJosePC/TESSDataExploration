@@ -1,3 +1,15 @@
+"""
+This script served to produce preliminary period distribution plots, and creates a master table with the period distribution of our cluster. This script produces some good/professional looking period distributions!
+
+This script will take the periodogram FITS files that getPeriodograms.py outputs, 
+and produce the mentioned products. It will write all files to the current folder.
+
+There are a couple paramters to take care of:
+:param targets_file: Filepath to target list, assumes astropy compatible table format
+:param ticid_col: Column in input table that has the targets TIC ID
+
+"""
+
 from glob import iglob, glob
 from os.path import join, isfile
 import matplotlib
@@ -14,15 +26,18 @@ from scipy.signal import argrelmax
 from usefulFuncs import decode_filename
 from LCFeatureExtraction import error_estimate
 
-targets = ascii.read('DataInput/cluster_targets_tic.ecsv')
-ticids = targets['TIC ID']
+
+targets_file = 'DataInput/cluster_targets_tic.ecsv'
+ticid_col = 'TIC ID'
+
+targets = ascii.read(targets_file)
+ticids = targets[ticid_col]
 solar_jk = (0.34, 0.49)
 fast_period = 0.4
 med_period = 6
 slow_period = 8
 mark_size = 150.0
 
-aperture_types = 'Threshold', 'Pipeline', 'Percentile'
 src_pgfs = 'PGs_FITS/*.fits'
 pgfs_paths = glob(src_pgfs)
 num_pfs = len(pgfs_paths)

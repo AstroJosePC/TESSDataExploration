@@ -1,3 +1,19 @@
+"""
+This script will take ALL the TPFs and apply the Handpicked, Threshold, and Percentile
+apertures to produce light curves, and save them in both FITS and PDF (image).
+Producing the light curves and saving them to FITS files is easy, but most of the
+code here is creating the perfect plot for showcasing the effets of 
+each aperture method on its light curve.
+
+The LightCurve FITS files will saved to a `LightCurvesFITS` folder, and the plots
+will be saved to a `LightCurvesPlots` folder.
+
+:param targets_file: Filepath to target list, assumes astropy compatible table format
+:param ticid_col: Column in input table that has the targets TIC ID
+:param mag_col: Column string that contains the grouping magnitude to assign apertures
+:param quality_path: Path to Quality flags FITS file, in my case it followed Chelsea's quality flags.
+
+"""
 from os import mkdir
 from os.path import isdir
 
@@ -11,6 +27,17 @@ from matplotlib.lines import Line2D
 
 from usefulFuncs import ifind_tpfs, getPercentileAp, extract_lightcurve
 
+targets_file = 'DataInput/cluster_targets_tic.ecsv'
+tic_col = 'TIC ID'
+mag_col = 'G Group'
+quality_path = 'DataInput/ClusterQuality/Sector8_Sample.fits.gz'
+percentile = 80
+radius = 3
+sector = 8
+cutsize = 8
+sigma = 3.0
+mask_color = 'pink'
+
 
 def find_mag(targets, ticid):
     """
@@ -19,28 +46,25 @@ def find_mag(targets, ticid):
     :param ticid: TIC ID of target
     :return: mag group
     """
-    return targets['G Group'][targets['TIC ID'] == ticid][0]
+    return targets[mag_col][targets[tic_col] == ticid][0]
 
-
-percentile = 80
-radius = 3
-sector = 8
-cutsize = 8
-sigma = 3.0
-mask_color = 'pink'
 
 # Get all target pixel files
 all_tpfs = ifind_tpfs()
 
 # Import target list
-targets = ascii.read('DataInput/cluster_targets_tic.ecsv')
+targets = ascii.read(targets_file)
 
 # Create folder to save LightCurve FITS
 if not isdir('LightCurvesFITS'):
     mkdir('LightCurvesFITS')
 
+# Create folder to save LightCurve plots
+if not isdir('LightCurvesPlots'):
+    mkdir('LightCurvesPlots')
+
 # Get quality mask
-with fits.open('DataInput/ClusterQuality/Sector8_Sample.fits.gz') as quality_sample:
+with fits.open(quality_path) as quality_sample:
     # For Chelsea's quality flags:
     #   0 means good, 1 means bad
     quality_flags = quality_sample[1].data['quality']
@@ -76,11 +100,15 @@ for tpf in all_tpfs:
     lc_threshbs = extract_lightcurve(tpf, tpf.threshAp, background_sub=True, remove_outlier=False)
     lc_percbs = extract_lightcurve(tpf, tpf.percAp, background_sub=True, remove_outlier=False)
 
+    # few parameters for plot_image function; for plotting the frame cutout
     frame = 300
     img_extent = (tpf.column, tpf.column + tpf.shape[2],
                   tpf.row, tpf.row + tpf.shape[1])
 
     with plt.style.context(MPLSTYLE):
+        # For the plot creation we use a GridSpec in order to 'facilitate' the organizing
+        # The top three axes (ax1, ax2, ax3) are the target frame cutout's aperture showcase
+        # The three long plots are the respective light curves in the same order.
         print(f'Creating plot for target {tpf.targetid}')
         fig = plt.figure(figsize=(12, 12))
         grid = plt.GridSpec(4, 3, hspace=0.58, wspace=0.1, bottom=0.05, left=0.065, right=1.,
@@ -114,7 +142,8 @@ for tpf in all_tpfs:
                                                        1, 1, color=mask_color, fill=True,
                                                        alpha=.6))
 
-        # Plot each light curve; remove outliers, create good/bad quality mask, and finally make scatter plot
+        # Plot each light curve; remove outliers, create good/bad quality-color mask, 
+        # and finally make scatter plots for each axes
         lc_orig_clean, mask_orig = lc_origbs.remove_outliers(sigma=sigma, return_mask=True)
         color_mask = [c for c, b in [*zip(colors, ~mask_orig)] if b]
         lc_orig_clean.scatter(ax=ax4, normalize=True, c=color_mask, show_colorbar=False)
@@ -131,6 +160,7 @@ for tpf in all_tpfs:
         ax6.set_title('Threshold Aperture LC')
 
         # Setting Y Limits; further clip data points to reduce Y-axis window
+        # This method is very crude and not very logical, I only employed it cause it worked.
         zthis = lc_orig_clean.remove_outliers(sigma=2.5).flux
         zthis2 = lc_perc_clean.remove_outliers(sigma=2.5).flux
         zthis3 = lc_thresh_clean.remove_outliers(sigma=2.5).flux
