@@ -32,9 +32,12 @@ While I am working on getting the report done, a potentially source of confusion
 Whenever code/documentation mentions Handpicked aperture I am refering to custom apertures I designed in Summmer 2019.
 For the handpicked apertures, our target stars were grouped by magnitude bins, and through the use of `lightkurve` interactive interface we 
 manually determined the best apertures for five random targets in each bin.
-Finally we average those five apertures and assign it to all the bin targets as our handpicked aperture.
-The function `getOrigAps` in usefulFunctions.py will automatically find the magnitude bins (G Mag) targets, group them, and average the manually-determined apertures.
-Unfortunately, my workflow change later and I did not document it. 
+Each aperture is a cut out sized array of 3's and 1's, where 3 is inside aperture, and 1 is outside aperture.
+If an aperture pixel is repeated in the five sample apertures, then we count it towards the magnitude group aperture.
+Finally assign the magnitude group apertures to their corresponding targets as our handpicked aperture.
+
+The function `getOrigAps` in usefulFunctions.py perform the processed mentioned above.
+Unfortunately, my workflow changed later and I did not document it. 
 I permanently assigned the apertures to my [Target Pixel Files](https://docs.lightkurve.org/tutorials/01-target-pixel-files.html) (TPF) as its custom aperture (`pipeline_mask`).
 Then, as shown in getLightCurves.py, I could access this custom aperture without recalculating.
 The documentation below will give more details on any assumptions made for each script.

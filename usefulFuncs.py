@@ -129,6 +129,7 @@ def getOrigAps(target_table='DataInput/cluster_targets_tic.ecsv',
                 iapt = TessLightCurveFile(tpf).hdu[2].data
                 apertures.append(iapt)
 
+        # Each aperture pixel has a value of 3. A repeated aperture pixel will be > 6.
         group_apts[i] = np.sum(apertures, axis=0) > max(6, len(apertures))
 
     return group_apts
