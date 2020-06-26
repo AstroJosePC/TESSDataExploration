@@ -53,6 +53,8 @@ aperture methods we use, and their impact on the light curves.
 
 DraftPeriodograms: These PDFs are simple periodogram plots produced from the three light curves for every target.
 
+SyntheticComparison & StellarModels: This datasets/PDFs are used and exported in period_distros.ipynb. Check the notebook for details.
+
 
 WHAT DO THE SCRIPTS DO?
 ---------------------------
