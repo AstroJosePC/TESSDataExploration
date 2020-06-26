@@ -1,9 +1,21 @@
 # TESSDataExploration
 Explore TESS data on open cluster IC 2391 to create custom light curves, and measure rotation periods.
+This is a repository with all documented code produced by me, Jose Perez Chavez, as part of the research with Stephanie Douglas.
+The code here showcases three aperture selection methods, their impacts on our cluster targets, and a period detection method for the TESS data.
+Documentation is extensive. This README will have an overview of the script description and usage, and the notebook's purpose. 
+There is a lot of in-script documentaiton as well. 
+
+(WORK IN PROGRESS) You can learn more about the project in the report written by me. You can view it here.
+While I am working on getting the report done, a potentially source of confusion is the handpicked apertures.
+Whenever code/documentation mentions Handpicked aperture I am refering to custom apertures I designed in Summmer 2019.
+For the handpicked apertures, our target stars were grouped by magnitude bins, and through the use of `lightkurve` interactive interface we 
+manually determined the best apertures for five random targets in each bin.
+Finally we average those five apertures and assign it to all the bin targets as our handpicked aperture.
+Most of the code here assumes I have the original manually-determined apertures, and I use them to make plots and compare different apertures.
+The documentation will point this out and have more details.
+
 
 Copyright 2019-2020 Jose Perez Chavez.   
-This code uses Stephanie's k2spin module, and part of George Zhou download_pixfiles/getlightcurve method
-
 Use at your own risk. This is free software made available under the MIT License. For details see the LICENSE file.
 
 DEPENDENCIES
@@ -18,7 +30,8 @@ This code makes use of the following python libraries:
     + lightkurve (https://docs.lightkurve.org/)
 
 All of them are open source and can be easily installed in any machine. I may be missing some.
-The k2spin submodule is included in this repo; make sure to pull the submodule.
+This code uses Stephanie's k2spin (sub)module, and part of George Zhou download_pixfiles/getlightcurve method
+
 
 KEY FOLDERS
 ---------------------------
@@ -37,37 +50,66 @@ DraftPeriodograms: These PDFs are simple periodogram plots produced from the thr
 WHAT DO THE SCRIPTS DO?
 ---------------------------
 
-All the details of each script's function is included in them. The following will describe the order of operation using the scripts, at least for my application. Most code will need modifications in order to work with another project specifications (e.g. another cluster).
+All the details of each script's function is included in them. The following will describe the order of operation using the scripts, at least for my application. Most code will need modifications in order to work with another project specifications (e.g. another cluster). Also, these scrips do not accept command line parameters (yet), all parameters must be modified in the script.
 
 ### usefulFunctions and LCFeatureExtraction
 These scripts are not really part of a order-of-operation. They simply hold useful functions that scripts use for light curve
-extraction, aperture selection, finding TPFs, etc. It serves as a fixed script that can hold repetitive functions.
+extraction, aperture selection, finding TPFs, etc. It serves as a fixed module that holds repetitive functions.
 
 ### download_tpfs8
-This script is the first one to pay attention to. In order to get started with the photometric data you probably want to download it to your computer for easy accesss. 
-The data will be available as Target Pixel Files, frame cutouts of our targets cadences.
-This script will take care of it as long as you adjust the parameters indicated in it.
-The script includes an alternative use that will write pre-computed apertures to the TPFs, but you will probably not use this as is.
+This script is your first stop at getting the data ready. 
+In order to get started with the photometric data you can download it to your computer for easy accesss.
+This script will download all the [Target Pixel Files](https://docs.lightkurve.org/tutorials/01-target-pixel-files.html) (TPF) of interest from your target table.
+The script also contains an example of how to write a custom aperture (`pipeline_mask`) to the TPF, but will skip it since I used it for my handpicked apertures.
+Once you have the appropriate paramteres simply call the script with 
+```
+python download_tpfs8.py
+```
 
 ### get_TargetPSF
-This script is useful to take make a quick showcase of the aperture selection methods for every cluster (IC2391) target. 
-It assumes it needs to compute the Handpicked apertures so it will need to be modified to be used; but the plotting code may be more useful.
+This script can make frame cutout plots of your target's TPFs with multiple apertures. 
+It is useful to make quick comparisons between apertures.
+It currently only works with my handpicked apertures setup, but it shows a great example on how to produce the plots in folder TargetFFI.
+If handpicked aperture data is available then you can execute the script with python:
+```
+python get_TargetPSF.py
+```
+
 
 ### getLightCurves
-This script is more useful than the previous for showcasing the aperture selection methods AND their impact on their respective light curves.
+We saw the previous script can showcase different apertures for the same target.
+This script will now do the same, but also show their impact on their respective processed light curves.
 It will extract background-subtracted light curves from all found TPFs for every aperture method, 
 and save the respective FITS files and a grid of plots with the frames and light curves per target.
-This way you can easily access the light curve data later. The plots are pretty cool too.
+This way you can easily access the light curve data later.
+Now we are not assuming to have the handpicked aperture data available, but we do have custom `pipeline_mask` apertures on each TPF.
+I worked on different design iterations for this plot and liked how they turned out. Feel free to use it.
+Once all parameters have been tweked you can execute the script with:
+```
+python getLightCurves.py
+```
+
 
 ### getPeriodograms
-This script is the culmination of the previous processes. It will exract the optimal periodogram for each cluster target using the functions explored in the notebook files (discussed below). The optimal periodogram is chosen by selecting the best light curve, the one with the lowest noise. The periodogram data is saved in a FITS file including a bootstrap threshold for period validity. The periodogram is plotted and saved as well with highlighted period peaks.
+This script is the culmination of previous scripts and the notebooks from the next section. 
+It will exract the periodogram of each target's best light curve from the three aperture methods I used; handpicked, percentile, and threshold.
+The best light curve is the one that has the lowest noise.
+The periodogram is saved in a FITS file including a bootstrap threshold for period validity. 
+The periodogram is plotted and saved as well with highlighted potential stellar rotation periods.
 The process in detail is discussed in the script, and the aperture selection is explored in the LCQualityIndicator notebook.
+Once all parameters have been tweked you can execute the script with:
+```
+python getPeriodograms.py
+```
 
 ### masterplot
 This script was used to produce preliminary period distributions, and save useful information on the processed / chosen aperture methods in a compact master table. 
 This master table is used to easily access the detected periods for our cluster targets, and is used in the period_distros notebook as an example. 
-While the plots produced by this script are good looking, I prefer the one from the period_distros notebook.
-
+While the plots produced by this script are good looking, I prefer the one from the period_distros notebook. For more info check the in-script docs.
+Again, for execution simply run:
+```
+python masterplot.py
+```
 
 
 WHAT ARE THE NOTEBOOKS?
@@ -97,12 +139,12 @@ Since the amplitude had proved a bad indicator, not shown in notebook, I went ah
 The noise metric showed optimistic results for indicating low-noise light curves, and potentially useful lightcurves that the periodogram will have no problem at processing.
 The notebook includes plenty of examples.
 
-### Patten & Simon
+### PattenPeriods
 This notebook's only purpose is to create a 'literature periods comparison'. The only other periods I found for this cluster are from Patten & Simon 1996. After running the getPeriodograms script I was able to compare the periods I got, to those from the literature and address any features / issues. I include a lot of notes on my findings in comparing these two datasets, and any complications.
 
 ### period_distros
 At last this notebook served to compare our period distribution to that of modelled stellar rotators of the same age (~50 Myr) as the cluster. The modelled data comes from Matt Sean (forwarded by Stephanie Douglas). I compare two datasets with different inital conditions, but the same model. At the end of the notebook I include robust notes on unusually high periods that I found in my period distribution that cannot be trusted, and tips on improving the period detection procedure.
-  
+
 
 TODO
 ---------------------------

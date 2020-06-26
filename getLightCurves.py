@@ -10,7 +10,7 @@ will be saved to a `LightCurvesPlots` folder.
 
 :param targets_file: Filepath to target list, assumes astropy compatible table format
 :param ticid_col: Column in input table that has the targets TIC ID
-:param mag_col: Column string that contains the grouping magnitude to assign apertures
+:param mag_col: Column that contains magnitude values that will be used for the LightCurveFile naming format.
 :param quality_path: Path to Quality flags FITS file, in my case it followed Chelsea's quality flags.
 
 """

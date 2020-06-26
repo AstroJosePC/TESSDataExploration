@@ -16,7 +16,7 @@ There are a few paramters to take care of:
 :param src_lcfs: Source Light Curve FITS files; the output FITS files from getLightCurves.py
 :param targets_file: Filepath to target list, assumes astropy compatible table format
 :param ticid_col: Column in input table that has the targets TIC ID
-:param mag_col: Column string that contains the grouping magnitude to assign apertures
+:param mag_col: Column that contains magnitude values that will be used for the periodogram naming format.
 :param pgs_savepath: folder path to save periodogram plot files
 :param pgs_fits_savepath: folder path to save periodogram FITS files
 :param quality_path: Path to Quality flags FITS file, in my case it followed Chelsea's quality flags.

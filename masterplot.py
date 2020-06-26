@@ -1,13 +1,15 @@
 """
-This script served to produce preliminary period distribution plots, and creates a master table with the period distribution of our cluster. This script produces some good/professional looking period distributions!
+This script served to produce preliminary period distribution plots, and creates a master table with the period distribution of our cluster. 
+This script produces some good/professional looking period distributions!
 
 This script will take the periodogram FITS files that getPeriodograms.py outputs, 
-and produce the mentioned products. It will write all files to the current folder.
+and save the highest peak (or detected rotation perido), and other important information.
+It will write all files to the current folder.
 
 There are a couple paramters to take care of:
 :param targets_file: Filepath to target list, assumes astropy compatible table format
 :param ticid_col: Column in input table that has the targets TIC ID
-
+:param src_pgfs: Source Periodogram FITS files; the output FITS files from getPeriodograms.py
 """
 
 from glob import iglob, glob
@@ -29,18 +31,21 @@ from LCFeatureExtraction import error_estimate
 
 targets_file = 'DataInput/cluster_targets_tic.ecsv'
 ticid_col = 'TIC ID'
+src_pgfs = 'PGs_FITS/*.fits'
 
 targets = ascii.read(targets_file)
 ticids = targets[ticid_col]
 solar_jk = (0.34, 0.49)
+mark_size = 150.0
+
+
+pgfs_paths = glob(src_pgfs)
+num_pfs = len(pgfs_paths)
+
+# Average period length of fast/med/slow rotators (from Gallet & Bouvier 2015)
 fast_period = 0.4
 med_period = 6
 slow_period = 8
-mark_size = 150.0
-
-src_pgfs = 'PGs_FITS/*.fits'
-pgfs_paths = glob(src_pgfs)
-num_pfs = len(pgfs_paths)
 
 fund_periods = np.zeros(num_pfs)
 fund_powers = np.zeros(num_pfs)
