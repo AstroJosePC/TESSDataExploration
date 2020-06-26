@@ -4,19 +4,11 @@ This is a repository with all documented code produced by me, Jose Perez Chavez,
 The code here showcases three aperture selection methods, their impacts on our cluster targets, and a period detection method for the TESS data.
 Documentation is extensive. This README will have an overview of the script description and usage, and the notebook's purpose. 
 There is a lot of in-script documentaiton as well. 
-
-(WORK IN PROGRESS) You can learn more about the project in the report written by me. You can view it here.
-While I am working on getting the report done, a potentially source of confusion is the handpicked apertures.
-Whenever code/documentation mentions Handpicked aperture I am refering to custom apertures I designed in Summmer 2019.
-For the handpicked apertures, our target stars were grouped by magnitude bins, and through the use of `lightkurve` interactive interface we 
-manually determined the best apertures for five random targets in each bin.
-Finally we average those five apertures and assign it to all the bin targets as our handpicked aperture.
-Most of the code here assumes I have the original manually-determined apertures, and I use them to make plots and compare different apertures.
-The documentation will point this out and have more details.
-
+You can learn more about the project in the report written by me. You can view it HERE (WORK IN PROGRESS).
 
 Copyright 2019-2020 Jose Perez Chavez.   
 Use at your own risk. This is free software made available under the MIT License. For details see the LICENSE file.
+
 
 DEPENDENCIES
 ------------
@@ -31,6 +23,21 @@ This code makes use of the following python libraries:
 
 All of them are open source and can be easily installed in any machine. I may be missing some.
 This code uses Stephanie's k2spin (sub)module, and part of George Zhou download_pixfiles/getlightcurve method
+
+
+Note on Handpicked Apertures
+------------
+
+While I am working on getting the report done, a potentially source of confusion is the handpicked apertures.
+Whenever code/documentation mentions Handpicked aperture I am refering to custom apertures I designed in Summmer 2019.
+For the handpicked apertures, our target stars were grouped by magnitude bins, and through the use of `lightkurve` interactive interface we 
+manually determined the best apertures for five random targets in each bin.
+Finally we average those five apertures and assign it to all the bin targets as our handpicked aperture.
+The function `getOrigAps` in usefulFunctions.py will automatically find the magnitude bins (G Mag) targets, group them, and average the manually-determined apertures.
+Unfortunately, my workflow change later and I did not document it. 
+I permanently assigned the apertures to my [Target Pixel Files](https://docs.lightkurve.org/tutorials/01-target-pixel-files.html) (TPF) as its custom aperture (`pipeline_mask`).
+Then, as shown in getLightCurves.py, I could access this custom aperture without recalculating.
+The documentation below will give more details on any assumptions made for each script.
 
 
 KEY FOLDERS
