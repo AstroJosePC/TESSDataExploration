@@ -24,7 +24,7 @@ def smooth_lightcurve(orig_lc: LightCurve, kernel=None, gauss_size=None, gauss_s
     :param kernel: The convolution kernel. Must be 1-Dimensional. Default Astropy's Gaussian1DKernel
     :param gauss_size: Size of the default Gaussian kernel. Default: SQRT[ light curve length ]
     :param gauss_std: Standard deviation of the default Gaussian kernel. Default: gauss_size / 10.0
-    :param break_tolerance: tolerance used to break light curve into sub-lightcurves
+    :param break_tolerance: tolerance used to break light curve into sub-lightcurves; multiples of cadence separation.
     :param convolution: convolution function; default astropy.stats..convolution
     :param kwargs: Keyword arguments to pass to the convolution function
     :return:
