@@ -4,7 +4,12 @@ This is a repository with all documented code produced by me, Jose Perez Chavez,
 The code here showcases three aperture selection methods, their impacts on our cluster targets, and a period detection method for the TESS data.
 Documentation is extensive. This README will have an overview of the script description and usage, and the notebook's purpose. 
 There is a lot of in-script documentaiton as well. 
-You can learn more about the project in the report written by me. You can view it HERE (WORK IN PROGRESS).
+You can learn more about the project in the report written by me. 
+You can view it HERE (WORK IN PROGRESS).
+
+There is missing product files, PDFs, and images. These files are stored in my own private cloud service. 
+These files include the original TESS cutouts, periodogram FITS, and master table.
+I shared these product files with my advisor, [Stephanie T. Douglas](https://stephanietdouglas.science/).
 
 Copyright 2019-2020 Jose Perez Chavez.   
 Use at your own risk. This is free software made available under the MIT License. For details see the LICENSE file.
@@ -31,14 +36,17 @@ Note on Handpicked Apertures
 While I am working on getting the report done, a potentially source of confusion is the handpicked apertures.
 Whenever code/documentation mentions Handpicked aperture I am refering to custom apertures I designed in Summmer 2019.
 For the handpicked apertures, our target stars were grouped by magnitude bins, and through the use of `lightkurve` interactive interface we 
-manually determined the best apertures for five random targets in each bin.
-Each aperture is a cut out sized array of 3's and 1's, where 3 is inside aperture, and 1 is outside aperture.
-If an aperture pixel is repeated in the five sample apertures, then we count it towards the magnitude group aperture.
+manually determined the best apertures for five random targets in each bin. There is a total of 8 magnitude bins/groups; 10, 11, 12, 13, 14, 15, 16, 17. 
+These five random targets per magnitude group are stored in the SampleTPFs folder.
+Each aperture is a cut out sized array of 3's and 1's values, where 3 is inside aperture, and 1 is outside aperture.
+If an aperture pixel is repeated twice or more among the five sample apertures, then we count it towards the magnitude group aperture.
 Finally assign the magnitude group apertures to their corresponding targets as our handpicked aperture.
 
-The function `getOrigAps` in usefulFunctions.py perform the processed mentioned above.
-Unfortunately, my workflow changed later and I did not document it. 
-I permanently assigned the apertures to my [Target Pixel Files](https://docs.lightkurve.org/tutorials/01-target-pixel-files.html) (TPF) as its custom aperture (`pipeline_mask`).
+The function `getOrigAps` in usefulFunctions.py performs the process mentioned above.
+Unfortunately, my workflow changed later and I did not document the handpicking process. 
+I permanently assigned the handpicked apertures to my the downloaded TESS cut outs (stored in products storage) as their custom aperture, `pipeline_mask`.
+
+[Target Pixel Files](https://docs.lightkurve.org/tutorials/01-target-pixel-files.html) (TPF) 
 Then, as shown in getLightCurves.py, I could access this custom aperture without recalculating.
 The documentation below will give more details on any assumptions made for each script.
 
@@ -46,6 +54,8 @@ The documentation below will give more details on any assumptions made for each 
 KEY FOLDERS
 ---------------------------
 DataInput: Folder dedicated to save initial tables (e.g. IC2391 targets), and other fixed data like the cluster quality flags.
+
+DataOutput/SampleTPFs: These TargetPixelFiles were handpicked to produce the handpicked apertures. The process is recorded in the usefulFuncs.getOrigAps function. There is 40 samples; 5 TPFs per G-magnitude group.
 
 TESSCuts: This folder contains the targets Target Pixel File cutouts; downloaded using `lightkurve`.
 
@@ -162,4 +172,14 @@ TODO
 ---------------------------
 
 ## Handpicked Apertures Irreproducibility
-Some of the scripts try to extract a target's Handpicked aperture from the start, by running the getOrigAps function. However, this is not reproducible since it is a very manual-work and it is very specific to how I did things. Instead, we should take advantage of the Target Pixel File object's pipeline_mask property that holds an aperture that is imported from the TPF FITS file. download_tpfs8.py script writes my handpicked apertures into the downloaded TPFs, but the rest of the scripts in this repo do not use it other than getLightcurves.py. We can separately write custom apertures into our targets' TPFs, and adjust the scrits so they use those instead of running getOrigAps. 
+The scripts included in this repository aren't very consistent when attempting to extract the handpicked aperture for each target.
+download_tpfs8.py script writes my handpicked apertures into the downloaded TPFs and assigns it to pipeline_mask using getOrigAps function.
+This is done as an attempt to later consistently get the handpicked apertures from the TPFs themselves. 
+Furthermore, the getOrigAps function assumes my directory structure, and samples have been handpicked to then produce the apertures. 
+The sample handpicking is described in the **Note on Handpicked Apertures** section above. 
+The issue with this is that it assumes you already had the TPF samples per group such that we can automatically assign the handpicked apertures into each downloaded TPF's pipeline_mask property in download_tpfs8.py.
+However, other scripts such as getTargetPSFs.py do not follow this rule, and attempt to extract the handpicked aperture using getOrigAps all over again.
+The scripts must be modified such that there is a consistent way to get the handpicked apertures.
+
+Altogether it becomes a bit confusing to try and reproduce the aperture handpicking. 
+Which is why I stored my original TPF samples in this repo, and my downloaded TESS cutouts with the appropriate handpicked apertures are stored in my products storage. 
