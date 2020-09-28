@@ -35,19 +35,19 @@ Note on Handpicked Apertures
 
 While I am working on getting the report done, a potentially source of confusion is the handpicked apertures.
 Whenever code/documentation mentions Handpicked aperture I am refering to custom apertures I designed in Summmer 2019.
-For the handpicked apertures, our target stars were grouped by magnitude bins, and through the use of `lightkurve` interactive interface we 
-manually determined the best apertures for five random targets in each bin. There is a total of 8 magnitude bins/groups; 10, 11, 12, 13, 14, 15, 16, 17. 
-These five random targets per magnitude group are stored in the SampleTPFs folder.
-Each aperture is a cut out sized array of 3's and 1's values, where 3 is inside aperture, and 1 is outside aperture.
-If an aperture pixel is repeated twice or more among the five sample apertures, then we count it towards the magnitude group aperture.
+After downloading the original TESS cutouts in [Target Pixel Files](https://docs.lightkurve.org/tutorials/01-target-pixel-files.html) (TPF) formats, I proceeded to determine the handpicked apertures.
+The target stars were grouped by magnitude bins.
+There is a total of 8 magnitude bins/groups; 10, 11, 12, 13, 14, 15, 16, 17. 
+Five random targets were chosen per magnitude group, and stored in SampleTPFs folder.
+An aperture that minimizes noise, and maximizes amplitde was chosen per sample target.
+Each aperture is an array of the size of the TESS cutouts where a value of 3 identifies a pixel inside aperture, and 1 is outside the aperture.
+If an aperture pixel is repeated twice or more among the five sample apertures, then we count it towards the final magnitude group aperture.
 Finally assign the magnitude group apertures to their corresponding targets as our handpicked aperture.
 
 The function `getOrigAps` in usefulFunctions.py performs the process mentioned above.
 Unfortunately, my workflow changed later and I did not document the handpicking process. 
 I permanently assigned the handpicked apertures to my the downloaded TESS cut outs (stored in products storage) as their custom aperture, `pipeline_mask`.
-
-[Target Pixel Files](https://docs.lightkurve.org/tutorials/01-target-pixel-files.html) (TPF) 
-Then, as shown in getLightCurves.py, I could access this custom aperture without recalculating.
+The property is later used in getLightCurves.py so I could access the handpicked aperture without recalculating it. 
 The documentation below will give more details on any assumptions made for each script.
 
 
